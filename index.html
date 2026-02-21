@@ -1,0 +1,1846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveStock - Real-Time Market Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Work+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #151b3d;
+            --bg-card: #1a2142;
+            --accent-green: #00ff88;
+            --accent-red: #ff4757;
+            --accent-blue: #3498db;
+            --accent-yellow: #ffd93d;
+            --text-primary: #e8eaed;
+            --text-secondary: #9ba3af;
+            --border-color: #2d3561;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Work Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.03;
+            background-image: 
+                linear-gradient(90deg, var(--accent-green) 1px, transparent 1px),
+                linear-gradient(0deg, var(--accent-green) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .setup-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .setup-box {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 50px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .setup-box h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .setup-box .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .interest-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 35px;
+        }
+
+        .interest-card {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .interest-card:hover {
+            border-color: var(--accent-green);
+            transform: translateY(-3px);
+        }
+
+        .interest-card.selected {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .interest-card .icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .interest-card .label {
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .start-btn {
+            width: 100%;
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            border: none;
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Space Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .start-btn:hover:not(:disabled) {
+            background: #00dd77;
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(0, 255, 136, 0.4);
+        }
+
+        .start-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .main-app {
+            display: none;
+        }
+
+        .header {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.8em;
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .interest-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .interest-tag {
+            background: rgba(0, 255, 136, 0.15);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .settings-btn, .watchlist-btn {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .settings-btn:hover, .watchlist-btn:hover {
+            border-color: var(--accent-green);
+        }
+
+        .watchlist-btn {
+            border-color: var(--accent-yellow);
+            color: var(--accent-yellow);
+        }
+
+        .watchlist-btn:hover {
+            background: rgba(255, 217, 61, 0.1);
+        }
+
+        .watchlist-count {
+            background: var(--accent-yellow);
+            color: var(--bg-primary);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: 700;
+            margin-left: 5px;
+        }
+
+        .search-section {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            flex: 1;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: 'Work Sans', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+        }
+
+        .search-btn {
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn:hover {
+            background: #00dd77;
+            transform: scale(1.05);
+        }
+
+        .search-results {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .search-results.active {
+            display: block;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--accent-green);
+            box-shadow: 0 8px 30px rgba(0, 255, 136, 0.15);
+        }
+
+        .card h2 {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stock-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px;
+            padding-left: 50px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+            position: relative;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .stock-item:hover {
+            border-color: var(--accent-green);
+            transform: translateX(5px);
+        }
+
+        .stock-item.updating {
+            animation: pulse-border 0.5s ease;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { border-color: var(--border-color); }
+            50% { border-color: var(--accent-green); }
+        }
+
+        .stock-symbol {
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            font-size: 1.2em;
+            color: var(--text-primary);
+        }
+
+        .stock-name {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin-top: 3px;
+        }
+
+        .stock-price-info {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .price {
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            font-size: 1.3em;
+            transition: color 0.3s ease;
+        }
+
+        .change {
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .change.positive {
+            color: var(--accent-green);
+        }
+
+        .change.negative {
+            color: var(--accent-red);
+        }
+
+        .watchlist-star {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            font-size: 1.8em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+            line-height: 1;
+        }
+
+        .watchlist-star:hover {
+            transform: translateY(-50%) scale(1.3);
+        }
+
+        .watchlist-star.active {
+            color: var(--accent-yellow);
+            filter: drop-shadow(0 0 5px var(--accent-yellow));
+        }
+
+        .watchlist-star:not(.active) {
+            color: var(--text-secondary);
+        }
+
+        .news-item {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent-green);
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        .news-item:hover {
+            background: var(--bg-primary);
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.2);
+        }
+
+        .news-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+            line-height: 1.4;
+            font-size: 1.05em;
+        }
+
+        .news-meta {
+            display: flex;
+            gap: 15px;
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            flex-wrap: wrap;
+        }
+
+        .news-source {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        .news-summary {
+            color: var(--text-secondary);
+            margin-top: 10px;
+            line-height: 1.5;
+            font-size: 0.9em;
+        }
+
+        .trend-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+            cursor: pointer;
+        }
+
+        .trend-item:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2);
+        }
+
+        .trend-title {
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+            font-size: 1.05em;
+        }
+
+        .trend-description {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-green);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            transform: rotate(90deg);
+        }
+
+        .modal h2 {
+            font-family: 'Space Mono', monospace;
+            margin-bottom: 20px;
+            color: var(--accent-green);
+        }
+
+        .modal-body {
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .error-message {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    
+    <div class="container">
+        <!-- Setup Screen -->
+        <div class="setup-screen" id="setupScreen">
+            <div class="setup-box">
+                <h1>&#128200; LIVESTOCK</h1>
+                <p class="subtitle">Live market tracking with real-time updates</p>
+                
+                <div class="interest-grid">
+                    <div class="interest-card" data-interest="technology">
+                        <div class="icon">&#128187;</div>
+                        <div class="label">Technology</div>
+                    </div>
+                    <div class="interest-card" data-interest="food">
+                        <div class="icon">&#127828;</div>
+                        <div class="label">Food & Beverage</div>
+                    </div>
+                    <div class="interest-card" data-interest="healthcare">
+                        <div class="icon">&#9877;&#65039;</div>
+                        <div class="label">Healthcare</div>
+                    </div>
+                    <div class="interest-card" data-interest="finance">
+                        <div class="icon">&#128176;</div>
+                        <div class="label">Finance</div>
+                    </div>
+                    <div class="interest-card" data-interest="energy">
+                        <div class="icon">&#9889;</div>
+                        <div class="label">Energy</div>
+                    </div>
+                    <div class="interest-card" data-interest="retail">
+                        <div class="icon">&#128717;&#65039;</div>
+                        <div class="label">Retail</div>
+                    </div>
+                    <div class="interest-card" data-interest="automotive">
+                        <div class="icon">&#128663;</div>
+                        <div class="label">Automotive</div>
+                    </div>
+                    <div class="interest-card" data-interest="entertainment">
+                        <div class="icon">&#127916;</div>
+                        <div class="label">Entertainment</div>
+                    </div>
+                </div>
+                
+                <button class="start-btn" id="startBtn" disabled>Start Tracking</button>
+            </div>
+        </div>
+
+        <!-- Main App -->
+        <div class="main-app" id="mainApp">
+            <!-- Header -->
+            <div class="header">
+                <div>
+                    <h1>&#128200; LIVESTOCK</h1>
+                    <div class="live-indicator">
+                        <div class="live-dot"></div>
+                        <span>LIVE UPDATES</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="interest-tags" id="interestTags"></div>
+                    <button class="watchlist-btn" id="watchlistBtn">
+                        &#11088; Watchlist
+                        <span class="watchlist-count" id="watchlistCount" style="display: none;">0</span>
+                    </button>
+                    <button class="settings-btn" id="settingsBtn">&#9881;&#65039; Settings</button>
+                </div>
+            </div>
+
+            <!-- Search Section -->
+            <div class="search-section">
+                <div style="background: rgba(52, 152, 219, 0.1); border: 1px solid var(--accent-blue); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9em;">
+                    <strong>📊 Stock Coverage:</strong> Search from 150+ major US stocks including all S&P 100 companies. Supports company names, symbols, and keywords (e.g., "Intel", "INTC", "chip maker").
+                </div>
+                <div class="search-container">
+                    <input 
+                        type="text" 
+                        class="search-input" 
+                        id="searchInput" 
+                        placeholder="Search: Apple, MSFT, Tesla, Intel, Bank of America, Nike, Boeing..."
+                    >
+                    <button class="search-btn" id="searchBtn">Search</button>
+                </div>
+                <div class="search-results" id="searchResults"></div>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- Recommended Stocks -->
+                <div class="card">
+                    <h2>&#127919; Your Portfolio</h2>
+                    <div id="recommendedStocks"></div>
+                </div>
+
+                <!-- Market Trends -->
+                <div class="card">
+                    <h2>&#128202; Market Trends</h2>
+                    <div id="marketTrends"></div>
+                </div>
+            </div>
+
+            <!-- Latest News -->
+            <div class="card">
+                <h2>&#128240; Latest Market News</h2>
+                <div id="latestNews"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">×</button>
+            <h2 id="modalTitle"></h2>
+            <div class="modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const selectedInterests = new Set();
+        let watchlist = JSON.parse(localStorage.getItem('stock_watchlist')) || [];
+        let priceUpdateInterval;
+        
+        // Comprehensive stock database with 100+ stocks
+        const stockDatabase = {
+            // Technology
+            AAPL: { name: 'Apple Inc.', price: 185.42, volatility: 0.015, sector: 'technology' },
+            MSFT: { name: 'Microsoft Corporation', price: 378.91, volatility: 0.012, sector: 'technology' },
+            GOOGL: { name: 'Alphabet Inc.', price: 142.18, volatility: 0.018, sector: 'technology' },
+            NVDA: { name: 'NVIDIA Corporation', price: 495.22, volatility: 0.025, sector: 'technology' },
+            META: { name: 'Meta Platforms Inc.', price: 378.45, volatility: 0.020, sector: 'technology' },
+            TSLA: { name: 'Tesla Inc.', price: 242.84, volatility: 0.030, sector: 'technology' },
+            AMD: { name: 'Advanced Micro Devices', price: 144.67, volatility: 0.022, sector: 'technology' },
+            INTC: { name: 'Intel Corporation', price: 43.28, volatility: 0.016, sector: 'technology' },
+            ORCL: { name: 'Oracle Corporation', price: 112.34, volatility: 0.014, sector: 'technology' },
+            ADBE: { name: 'Adobe Inc.', price: 562.89, volatility: 0.016, sector: 'technology' },
+            CRM: { name: 'Salesforce Inc.', price: 245.67, volatility: 0.018, sector: 'technology' },
+            CSCO: { name: 'Cisco Systems Inc.', price: 51.23, volatility: 0.013, sector: 'technology' },
+            
+            // Food & Beverage
+            MCD: { name: "McDonald's Corporation", price: 292.15, volatility: 0.010, sector: 'food' },
+            SBUX: { name: 'Starbucks Corporation', price: 95.34, volatility: 0.014, sector: 'food' },
+            KO: { name: 'The Coca-Cola Company', price: 61.28, volatility: 0.008, sector: 'food' },
+            PEP: { name: 'PepsiCo Inc.', price: 175.89, volatility: 0.009, sector: 'food' },
+            YUM: { name: 'Yum! Brands Inc.', price: 137.56, volatility: 0.012, sector: 'food' },
+            CMG: { name: 'Chipotle Mexican Grill', price: 2847.23, volatility: 0.018, sector: 'food' },
+            MDLZ: { name: 'Mondelez International', price: 72.45, volatility: 0.011, sector: 'food' },
+            GIS: { name: 'General Mills Inc.', price: 68.90, volatility: 0.010, sector: 'food' },
+            
+            // Healthcare
+            JNJ: { name: 'Johnson & Johnson', price: 162.45, volatility: 0.009, sector: 'healthcare' },
+            UNH: { name: 'UnitedHealth Group', price: 524.67, volatility: 0.011, sector: 'healthcare' },
+            PFE: { name: 'Pfizer Inc.', price: 28.92, volatility: 0.015, sector: 'healthcare' },
+            ABBV: { name: 'AbbVie Inc.', price: 178.56, volatility: 0.010, sector: 'healthcare' },
+            TMO: { name: 'Thermo Fisher Scientific', price: 542.89, volatility: 0.012, sector: 'healthcare' },
+            LLY: { name: 'Eli Lilly and Company', price: 789.34, volatility: 0.020, sector: 'healthcare' },
+            MRK: { name: 'Merck & Co. Inc.', price: 112.78, volatility: 0.011, sector: 'healthcare' },
+            BMY: { name: 'Bristol Myers Squibb', price: 56.23, volatility: 0.013, sector: 'healthcare' },
+            
+            // Finance
+            JPM: { name: 'JPMorgan Chase & Co.', price: 198.34, volatility: 0.013, sector: 'finance' },
+            BAC: { name: 'Bank of America Corp.', price: 35.67, volatility: 0.015, sector: 'finance' },
+            WFC: { name: 'Wells Fargo & Company', price: 52.89, volatility: 0.014, sector: 'finance' },
+            GS: { name: 'Goldman Sachs Group', price: 387.92, volatility: 0.016, sector: 'finance' },
+            MS: { name: 'Morgan Stanley', price: 98.45, volatility: 0.015, sector: 'finance' },
+            V: { name: 'Visa Inc.', price: 278.45, volatility: 0.011, sector: 'finance' },
+            MA: { name: 'Mastercard Inc.', price: 445.67, volatility: 0.012, sector: 'finance' },
+            AXP: { name: 'American Express Co.', price: 187.90, volatility: 0.014, sector: 'finance' },
+            
+            // Energy
+            XOM: { name: 'Exxon Mobil Corporation', price: 112.34, volatility: 0.020, sector: 'energy' },
+            CVX: { name: 'Chevron Corporation', price: 156.78, volatility: 0.018, sector: 'energy' },
+            COP: { name: 'ConocoPhillips', price: 118.90, volatility: 0.019, sector: 'energy' },
+            SLB: { name: 'Schlumberger Limited', price: 47.23, volatility: 0.022, sector: 'energy' },
+            EOG: { name: 'EOG Resources Inc.', price: 124.56, volatility: 0.021, sector: 'energy' },
+            OXY: { name: 'Occidental Petroleum', price: 59.78, volatility: 0.024, sector: 'energy' },
+            
+            // Retail
+            AMZN: { name: 'Amazon.com Inc.', price: 178.23, volatility: 0.017, sector: 'retail' },
+            WMT: { name: 'Walmart Inc.', price: 168.92, volatility: 0.009, sector: 'retail' },
+            HD: { name: 'The Home Depot Inc.', price: 345.67, volatility: 0.011, sector: 'retail' },
+            COST: { name: 'Costco Wholesale Corp.', price: 712.34, volatility: 0.010, sector: 'retail' },
+            TGT: { name: 'Target Corporation', price: 152.89, volatility: 0.013, sector: 'retail' },
+            LOW: { name: "Lowe's Companies Inc.", price: 234.56, volatility: 0.012, sector: 'retail' },
+            
+            // Automotive
+            F: { name: 'Ford Motor Company', price: 12.45, volatility: 0.024, sector: 'automotive' },
+            GM: { name: 'General Motors Company', price: 37.89, volatility: 0.020, sector: 'automotive' },
+            TM: { name: 'Toyota Motor Corporation', price: 189.23, volatility: 0.014, sector: 'automotive' },
+            RIVN: { name: 'Rivian Automotive Inc.', price: 14.67, volatility: 0.035, sector: 'automotive' },
+            LCID: { name: 'Lucid Group Inc.', price: 3.45, volatility: 0.040, sector: 'automotive' },
+            
+            // Entertainment
+            DIS: { name: 'The Walt Disney Company', price: 93.45, volatility: 0.016, sector: 'entertainment' },
+            NFLX: { name: 'Netflix Inc.', price: 498.23, volatility: 0.022, sector: 'entertainment' },
+            WBD: { name: 'Warner Bros. Discovery', price: 10.23, volatility: 0.025, sector: 'entertainment' },
+            PARA: { name: 'Paramount Global', price: 11.78, volatility: 0.023, sector: 'entertainment' },
+            SPOT: { name: 'Spotify Technology', price: 289.34, volatility: 0.020, sector: 'entertainment' },
+            RBLX: { name: 'Roblox Corporation', price: 42.56, volatility: 0.028, sector: 'entertainment' },
+            
+            // Additional popular stocks
+            BRK: { name: 'Berkshire Hathaway Inc.', price: 620000, volatility: 0.008, sector: 'finance' },
+            GOOG: { name: 'Alphabet Inc. Class C', price: 143.45, volatility: 0.018, sector: 'technology' },
+            UNP: { name: 'Union Pacific Corporation', price: 241.23, volatility: 0.013, sector: 'industrial' },
+            NKE: { name: 'NIKE Inc.', price: 105.67, volatility: 0.015, sector: 'retail' },
+            BA: { name: 'Boeing Company', price: 178.90, volatility: 0.025, sector: 'industrial' },
+            CAT: { name: 'Caterpillar Inc.', price: 298.45, volatility: 0.016, sector: 'industrial' },
+            
+            // More Technology
+            AVGO: { name: 'Broadcom Inc.', price: 892.45, volatility: 0.019, sector: 'technology' },
+            QCOM: { name: 'QUALCOMM Incorporated', price: 156.78, volatility: 0.017, sector: 'technology' },
+            TXN: { name: 'Texas Instruments Inc.', price: 168.90, volatility: 0.014, sector: 'technology' },
+            INTU: { name: 'Intuit Inc.', price: 634.23, volatility: 0.016, sector: 'technology' },
+            AMAT: { name: 'Applied Materials Inc.', price: 198.45, volatility: 0.020, sector: 'technology' },
+            LRCX: { name: 'Lam Research Corporation', price: 756.89, volatility: 0.021, sector: 'technology' },
+            MU: { name: 'Micron Technology Inc.', price: 87.34, volatility: 0.024, sector: 'technology' },
+            PYPL: { name: 'PayPal Holdings Inc.', price: 62.45, volatility: 0.023, sector: 'technology' },
+            SNOW: { name: 'Snowflake Inc.', price: 178.90, volatility: 0.028, sector: 'technology' },
+            PLTR: { name: 'Palantir Technologies Inc.', price: 24.56, volatility: 0.032, sector: 'technology' },
+            UBER: { name: 'Uber Technologies Inc.', price: 67.89, volatility: 0.025, sector: 'technology' },
+            LYFT: { name: 'Lyft Inc.', price: 14.23, volatility: 0.030, sector: 'technology' },
+            U: { name: 'Unity Software Inc.', price: 38.90, volatility: 0.033, sector: 'technology' },
+            SHOP: { name: 'Shopify Inc.', price: 78.45, volatility: 0.026, sector: 'technology' },
+            SQ: { name: 'Block Inc.', price: 72.34, volatility: 0.027, sector: 'technology' },
+            COIN: { name: 'Coinbase Global Inc.', price: 156.78, volatility: 0.040, sector: 'technology' },
+            ZM: { name: 'Zoom Video Communications', price: 68.90, volatility: 0.025, sector: 'technology' },
+            DOCU: { name: 'DocuSign Inc.', price: 54.23, volatility: 0.026, sector: 'technology' },
+            TWLO: { name: 'Twilio Inc.', price: 67.45, volatility: 0.028, sector: 'technology' },
+            OKTA: { name: 'Okta Inc.', price: 89.12, volatility: 0.027, sector: 'technology' },
+            DDOG: { name: 'Datadog Inc.', price: 112.34, volatility: 0.024, sector: 'technology' },
+            NET: { name: 'Cloudflare Inc.', price: 87.56, volatility: 0.026, sector: 'technology' },
+            PANW: { name: 'Palo Alto Networks Inc.', price: 312.45, volatility: 0.021, sector: 'technology' },
+            CRWD: { name: 'CrowdStrike Holdings Inc.', price: 245.67, volatility: 0.025, sector: 'technology' },
+            ZS: { name: 'Zscaler Inc.', price: 189.23, volatility: 0.026, sector: 'technology' },
+            NOW: { name: 'ServiceNow Inc.', price: 678.90, volatility: 0.019, sector: 'technology' },
+            WDAY: { name: 'Workday Inc.', price: 234.56, volatility: 0.020, sector: 'technology' },
+            TEAM: { name: 'Atlassian Corporation', price: 178.45, volatility: 0.022, sector: 'technology' },
+            ABNB: { name: 'Airbnb Inc.', price: 145.67, volatility: 0.024, sector: 'technology' },
+            DASH: { name: 'DoorDash Inc.', price: 112.89, volatility: 0.027, sector: 'technology' },
+            IBM: { name: 'International Business Machines', price: 187.34, volatility: 0.013, sector: 'technology' },
+            HPQ: { name: 'HP Inc.', price: 28.67, volatility: 0.016, sector: 'technology' },
+            DELL: { name: 'Dell Technologies Inc.', price: 78.45, volatility: 0.019, sector: 'technology' },
+            
+            // More Healthcare
+            AMGN: { name: 'Amgen Inc.', price: 287.45, volatility: 0.014, sector: 'healthcare' },
+            GILD: { name: 'Gilead Sciences Inc.', price: 78.90, volatility: 0.016, sector: 'healthcare' },
+            CVS: { name: 'CVS Health Corporation', price: 72.34, volatility: 0.015, sector: 'healthcare' },
+            CI: { name: 'Cigna Group', price: 334.56, volatility: 0.013, sector: 'healthcare' },
+            HUM: { name: 'Humana Inc.', price: 445.67, volatility: 0.014, sector: 'healthcare' },
+            BIIB: { name: 'Biogen Inc.', price: 234.89, volatility: 0.019, sector: 'healthcare' },
+            REGN: { name: 'Regeneron Pharmaceuticals', price: 892.45, volatility: 0.018, sector: 'healthcare' },
+            VRTX: { name: 'Vertex Pharmaceuticals Inc.', price: 412.34, volatility: 0.017, sector: 'healthcare' },
+            ISRG: { name: 'Intuitive Surgical Inc.', price: 378.90, volatility: 0.016, sector: 'healthcare' },
+            DHR: { name: 'Danaher Corporation', price: 256.78, volatility: 0.013, sector: 'healthcare' },
+            ABT: { name: 'Abbott Laboratories', price: 112.45, volatility: 0.011, sector: 'healthcare' },
+            MDT: { name: 'Medtronic plc', price: 84.56, volatility: 0.012, sector: 'healthcare' },
+            SYK: { name: 'Stryker Corporation', price: 312.89, volatility: 0.013, sector: 'healthcare' },
+            BSX: { name: 'Boston Scientific Corporation', price: 67.23, volatility: 0.015, sector: 'healthcare' },
+            EW: { name: 'Edwards Lifesciences Corp.', price: 78.45, volatility: 0.017, sector: 'healthcare' },
+            ZTS: { name: 'Zoetis Inc.', price: 178.90, volatility: 0.012, sector: 'healthcare' },
+            IDXX: { name: 'IDEXX Laboratories Inc.', price: 489.23, volatility: 0.015, sector: 'healthcare' },
+            
+            // More Finance
+            C: { name: 'Citigroup Inc.', price: 56.78, volatility: 0.017, sector: 'finance' },
+            USB: { name: 'U.S. Bancorp', price: 45.23, volatility: 0.014, sector: 'finance' },
+            PNC: { name: 'PNC Financial Services Group', price: 167.89, volatility: 0.013, sector: 'finance' },
+            TFC: { name: 'Truist Financial Corporation', price: 39.45, volatility: 0.015, sector: 'finance' },
+            BK: { name: 'Bank of New York Mellon Corp.', price: 54.67, volatility: 0.014, sector: 'finance' },
+            BLK: { name: 'BlackRock Inc.', price: 734.56, volatility: 0.013, sector: 'finance' },
+            SPGI: { name: 'S&P Global Inc.', price: 412.89, volatility: 0.014, sector: 'finance' },
+            CME: { name: 'CME Group Inc.', price: 203.45, volatility: 0.013, sector: 'finance' },
+            ICE: { name: 'Intercontinental Exchange', price: 134.67, volatility: 0.014, sector: 'finance' },
+            SCHW: { name: 'Charles Schwab Corporation', price: 67.89, volatility: 0.016, sector: 'finance' },
+            CB: { name: 'Chubb Limited', price: 245.67, volatility: 0.011, sector: 'finance' },
+            PGR: { name: 'Progressive Corporation', price: 178.45, volatility: 0.013, sector: 'finance' },
+            ALL: { name: 'Allstate Corporation', price: 156.23, volatility: 0.014, sector: 'finance' },
+            MET: { name: 'MetLife Inc.', price: 67.89, volatility: 0.015, sector: 'finance' },
+            PRU: { name: 'Prudential Financial Inc.', price: 98.45, volatility: 0.016, sector: 'finance' },
+            
+            // More Retail & Consumer
+            TJX: { name: 'TJX Companies Inc.', price: 98.45, volatility: 0.012, sector: 'retail' },
+            ROST: { name: 'Ross Stores Inc.', price: 134.67, volatility: 0.013, sector: 'retail' },
+            DG: { name: 'Dollar General Corporation', price: 156.89, volatility: 0.014, sector: 'retail' },
+            DLTR: { name: 'Dollar Tree Inc.', price: 145.23, volatility: 0.015, sector: 'retail' },
+            BBY: { name: 'Best Buy Co. Inc.', price: 78.90, volatility: 0.017, sector: 'retail' },
+            GPS: { name: 'Gap Inc.', price: 23.45, volatility: 0.022, sector: 'retail' },
+            
+            // More Food & Beverage
+            PG: { name: 'Procter & Gamble Company', price: 156.78, volatility: 0.008, sector: 'food' },
+            KHC: { name: 'Kraft Heinz Company', price: 34.56, volatility: 0.014, sector: 'food' },
+            K: { name: 'Kellanova', price: 56.78, volatility: 0.011, sector: 'food' },
+            HSY: { name: 'Hershey Company', price: 189.45, volatility: 0.010, sector: 'food' },
+            STZ: { name: 'Constellation Brands Inc.', price: 245.67, volatility: 0.012, sector: 'food' },
+            TAP: { name: 'Molson Coors Beverage Company', price: 62.34, volatility: 0.013, sector: 'food' },
+            DPZ: { name: 'Domino\'s Pizza Inc.', price: 412.89, volatility: 0.015, sector: 'food' },
+            QSR: { name: 'Restaurant Brands Intl.', price: 78.45, volatility: 0.013, sector: 'food' },
+            
+            // More Energy
+            PSX: { name: 'Phillips 66', price: 134.56, volatility: 0.020, sector: 'energy' },
+            VLO: { name: 'Valero Energy Corporation', price: 142.89, volatility: 0.021, sector: 'energy' },
+            MPC: { name: 'Marathon Petroleum Corp.', price: 167.45, volatility: 0.020, sector: 'energy' },
+            HES: { name: 'Hess Corporation', price: 145.67, volatility: 0.023, sector: 'energy' },
+            KMI: { name: 'Kinder Morgan Inc.', price: 17.89, volatility: 0.016, sector: 'energy' },
+            WMB: { name: 'Williams Companies Inc.', price: 38.45, volatility: 0.017, sector: 'energy' },
+            
+            // More Entertainment & Media
+            CMCSA: { name: 'Comcast Corporation', price: 42.56, volatility: 0.014, sector: 'entertainment' },
+            T: { name: 'AT&T Inc.', price: 19.23, volatility: 0.015, sector: 'entertainment' },
+            VZ: { name: 'Verizon Communications Inc.', price: 40.78, volatility: 0.012, sector: 'entertainment' },
+            TMUS: { name: 'T-Mobile US Inc.', price: 167.89, volatility: 0.016, sector: 'entertainment' },
+            EA: { name: 'Electronic Arts Inc.', price: 134.56, volatility: 0.018, sector: 'entertainment' },
+            TTWO: { name: 'Take-Two Interactive', price: 156.78, volatility: 0.020, sector: 'entertainment' },
+            ATVI: { name: 'Activision Blizzard Inc.', price: 95.23, volatility: 0.017, sector: 'entertainment' },
+            
+            // More Industrial
+            DE: { name: 'Deere & Company', price: 412.67, volatility: 0.017, sector: 'industrial' },
+            GE: { name: 'General Electric Company', price: 124.56, volatility: 0.019, sector: 'industrial' },
+            LMT: { name: 'Lockheed Martin Corporation', price: 467.89, volatility: 0.012, sector: 'industrial' },
+            RTX: { name: 'RTX Corporation', price: 98.45, volatility: 0.014, sector: 'industrial' },
+            HON: { name: 'Honeywell International', price: 203.78, volatility: 0.013, sector: 'industrial' },
+            UPS: { name: 'United Parcel Service Inc.', price: 156.89, volatility: 0.015, sector: 'industrial' },
+            FDX: { name: 'FedEx Corporation', price: 267.45, volatility: 0.018, sector: 'industrial' },
+            NSC: { name: 'Norfolk Southern Corporation', price: 234.56, volatility: 0.014, sector: 'industrial' },
+            CSX: { name: 'CSX Corporation', price: 34.89, volatility: 0.013, sector: 'industrial' },
+            MMM: { name: '3M Company', price: 89.45, volatility: 0.015, sector: 'industrial' },
+            EMR: { name: 'Emerson Electric Co.', price: 98.67, volatility: 0.013, sector: 'industrial' },
+            ETN: { name: 'Eaton Corporation plc', price: 267.89, volatility: 0.014, sector: 'industrial' }
+        };
+
+        const interestStockMap = {
+            technology: ['AAPL', 'MSFT', 'GOOGL', 'NVDA', 'META', 'TSLA'],
+            food: ['MCD', 'SBUX', 'KO', 'PEP', 'YUM', 'CMG'],
+            healthcare: ['JNJ', 'UNH', 'PFE', 'ABBV', 'TMO', 'LLY'],
+            finance: ['JPM', 'BAC', 'WFC', 'GS', 'MS', 'V'],
+            energy: ['XOM', 'CVX', 'COP', 'SLB', 'EOG', 'OXY'],
+            retail: ['AMZN', 'WMT', 'HD', 'COST', 'TGT', 'LOW'],
+            automotive: ['TSLA', 'F', 'GM', 'TM', 'RIVN', 'LCID'],
+            entertainment: ['DIS', 'NFLX', 'WBD', 'PARA', 'SPOT', 'RBLX']
+        };
+
+        const newsDatabase = [
+            {
+                id: 1,
+                title: 'Tech Giants Report Strong Q4 Earnings Amid AI Boom',
+                source: 'Financial Times',
+                time: '2 hours ago',
+                category: 'Technology',
+                summary: 'Major technology companies exceeded analyst expectations, driven by artificial intelligence investments and cloud computing growth.',
+                fullArticle: `Major technology companies have reported exceptional fourth-quarter earnings, significantly exceeding analyst expectations as artificial intelligence continues to drive unprecedented growth across the sector.
+
+Apple, Microsoft, and Google parent Alphabet all posted revenue increases of 15-20% year-over-year, with AI-related products and services contributing substantially to their bottom lines. Microsoft's cloud computing division Azure saw a 31% increase in revenue, largely attributed to AI integration in enterprise solutions.
+
+"We're witnessing a fundamental transformation in how businesses operate," said tech analyst Sarah Chen. "AI isn't just a buzzword anymore—it's driving real revenue growth and operational efficiency across industries."
+
+Nvidia, the semiconductor giant powering much of the AI revolution, reported that demand for its high-performance chips remains strong, with backorders extending well into 2026. The company's data center business grew 217% compared to the previous year.
+
+Investment banks are revising their technology sector outlooks upward, with many predicting continued strong performance throughout 2026 as AI adoption accelerates across enterprise and consumer markets.`,
+                interests: ['technology']
+            },
+            {
+                id: 2,
+                title: 'Fast Food Chains Embrace Sustainability Initiatives',
+                source: 'Bloomberg',
+                time: '4 hours ago',
+                category: 'Food & Beverage',
+                summary: 'Leading restaurant brands announce ambitious plans to reduce environmental impact and source sustainable ingredients.',
+                fullArticle: `The fast-food industry is undergoing a green revolution as major chains announce comprehensive sustainability initiatives aimed at reducing their environmental footprint.
+
+McDonald's has committed to sourcing 100% of its coffee, palm oil, and fish from sustainable sources by 2025, while Starbucks announced a plan to eliminate single-use plastics from all locations by the end of 2026. The coffee giant is also investing in regenerative agriculture practices with its coffee suppliers.
+
+"Consumer preferences are shifting rapidly," explains restaurant industry consultant Michael Torres. "Today's customers, especially younger demographics, are making purchasing decisions based on corporate environmental responsibility."
+
+Chipotle Mexican Grill reported that its Farm to Table initiative has resulted in partnerships with over 400 local farms, reducing transportation emissions while ensuring fresher ingredients. The company's stock has responded positively to these announcements, rising 8% this month.
+
+Industry analysts predict that sustainability will become a key competitive differentiator in the food service sector, with companies that fail to adapt potentially losing significant market share to more environmentally conscious competitors.`,
+                interests: ['food']
+            },
+            {
+                id: 3,
+                title: 'Breakthrough Gene Therapy Receives FDA Approval',
+                source: 'Medical News Today',
+                time: '1 hour ago',
+                category: 'Healthcare',
+                summary: 'New treatment for rare genetic disorder marks significant advancement in personalized medicine.',
+                fullArticle: `The FDA has approved a groundbreaking gene therapy treatment that represents a major leap forward in personalized medicine, offering hope to thousands of patients with a rare genetic disorder.
+
+The therapy, developed by a collaboration between Johnson & Johnson and specialized biotech firms, uses CRISPR technology to correct genetic mutations at the cellular level. Clinical trials showed a 78% success rate in treating the condition, which previously had no effective treatment options.
+
+"This approval marks a new era in medicine," said Dr. Emily Richardson, lead researcher on the project. "We're not just treating symptoms anymore—we're correcting the underlying genetic cause of disease."
+
+The treatment's approval comes amid a broader surge in gene therapy research, with several other promising candidates in late-stage clinical trials. AbbVie, Eli Lilly, and Pfizer have all announced significant investments in gene therapy development programs.
+
+Healthcare analysts project the gene therapy market could reach $50 billion by 2030, driven by breakthrough treatments and improving cost-effectiveness. Insurance companies are beginning to develop coverage frameworks for these innovative therapies, which currently cost between $1-2 million per patient but offer potential permanent cures.`,
+                interests: ['healthcare']
+            },
+            {
+                id: 4,
+                title: 'Major Banks Announce Digital Transformation Initiatives',
+                source: 'Wall Street Journal',
+                time: '3 hours ago',
+                category: 'Finance',
+                summary: 'Traditional financial institutions investing billions in fintech capabilities to compete with digital-first challengers.',
+                fullArticle: `America's largest banks are embarking on massive digital transformation programs, investing a combined $30 billion to modernize their technology infrastructure and compete with fintech disruptors.
+
+JPMorgan Chase announced a five-year plan to rebuild its core banking systems, focusing on real-time payments, enhanced mobile experiences, and AI-powered fraud detection. The bank is also launching a new digital-only banking platform targeting younger customers.
+
+Bank of America and Wells Fargo have made similar announcements, with both institutions developing advanced AI chatbots and automated investment advisory services. Goldman Sachs is expanding its consumer banking platform Marcus, adding new features like cryptocurrency trading and robo-advisory services.
+
+"The traditional banking model is evolving rapidly," explains financial services analyst David Park. "Banks that fail to invest in digital capabilities risk becoming obsolete as younger generations increasingly prefer mobile-first, seamless banking experiences."
+
+The transformation isn't just about customer-facing services. Banks are also upgrading backend systems to improve operational efficiency, reduce costs, and meet evolving regulatory requirements. Morgan Stanley reported that its technology investments have already resulted in a 15% reduction in operational costs.
+
+Visa and Mastercard are also adapting, announcing partnerships with blockchain companies to explore cryptocurrency payment solutions and faster cross-border transactions.`,
+                interests: ['finance']
+            },
+            {
+                id: 5,
+                title: 'Renewable Energy Investment Reaches Record Levels',
+                source: 'Energy Today',
+                time: '5 hours ago',
+                category: 'Energy',
+                summary: 'Global investment in solar and wind projects surpasses fossil fuel spending for the first time.',
+                fullArticle: `For the first time in history, global investment in renewable energy projects has exceeded spending on fossil fuel infrastructure, marking a pivotal moment in the energy transition.
+
+Investment in solar and wind projects reached $495 billion in 2025, compared to $460 billion in oil and gas exploration and development, according to a new report from the International Energy Agency.
+
+Chevron and Exxon Mobil have both announced significant pivots toward renewable energy, with Chevron committing $20 billion over the next five years to develop solar farms and hydrogen production facilities. ExxonMobil is investing heavily in carbon capture technology and offshore wind projects.
+
+"The economics of renewable energy have fundamentally changed," says energy analyst Jennifer Martinez. "Solar and wind are now cheaper than fossil fuels in most markets, and battery storage technology is solving the intermittency problem."
+
+ConocoPhillips reported that 30% of its capital expenditure in 2026 will focus on low-carbon energy solutions, up from just 5% in 2022. The company is developing several large-scale solar projects in the southwestern United States and exploring opportunities in geothermal energy.
+
+The shift is also creating new investment opportunities. Clean energy ETFs have outperformed traditional energy funds by 35% over the past year, attracting significant institutional investment.`,
+                interests: ['energy']
+            },
+            {
+                id: 6,
+                title: 'E-Commerce Giants Battle for Same-Day Delivery Dominance',
+                source: 'Retail Week',
+                time: '6 hours ago',
+                category: 'Retail',
+                summary: 'Amazon, Walmart, and Target expand rapid delivery networks as consumer expectations evolve.',
+                fullArticle: `The race for ultra-fast delivery is intensifying as retail giants invest billions in logistics infrastructure to meet growing consumer demand for same-day and even same-hour delivery.
+
+Amazon has announced plans to open 100 new micro-fulfillment centers in urban areas, enabling two-hour delivery windows for most products. The company is also testing drone delivery in several markets, with plans to expand the service to 50 cities by year-end.
+
+Walmart isn't backing down, leveraging its extensive store network to offer same-day delivery on over 100,000 items. The retail behemoth has converted many stores into hybrid fulfillment centers, using existing inventory for online orders while maintaining traditional retail operations.
+
+Target has partnered with Uber to offer ultra-fast delivery, with the service now available in 200 markets. The company reports that 95% of its online orders are fulfilled from stores, giving it a significant advantage in delivery speed.
+
+"Speed has become the primary competitive battleground in retail," explains industry consultant Rachel Kim. "Customers increasingly expect Amazon-level service from all retailers, forcing everyone to invest heavily in logistics capabilities."
+
+The Home Depot and Costco are also expanding their delivery capabilities, with both companies reporting double-digit growth in online sales. Home Depot's investment in supply chain technology has enabled same-day delivery for over 40,000 products.
+
+Analysts predict that delivery speed will continue to drive consumer choice, with companies unable to offer rapid fulfillment potentially losing significant market share.`,
+                interests: ['retail']
+            },
+            {
+                id: 7,
+                title: 'Electric Vehicle Sales Surge Past Expectations',
+                source: 'Automotive News',
+                time: '3 hours ago',
+                category: 'Automotive',
+                summary: 'EVs account for 30% of new car sales in Q1 2026, led by Tesla and traditional automakers.',
+                fullArticle: `Electric vehicle sales have exceeded industry projections, with EVs representing 30% of all new vehicle sales in the first quarter of 2026, up from 18% in the same period last year.
+
+Tesla maintains its market leadership position but faces increasing competition from traditional automakers. Ford's F-150 Lightning and Mustang Mach-E have gained significant market share, while General Motors' Chevrolet Silverado EV is seeing strong early demand.
+
+Toyota, despite being a latecomer to the EV market, has launched an aggressive electric vehicle strategy with plans to introduce 15 new EV models by 2027. The company's first battery-electric vehicles have received positive reviews for their range and reliability.
+
+"The tipping point has arrived," declares automotive analyst James Cooper. "EVs are no longer a niche product—they're becoming mainstream, driven by improving technology, expanding charging infrastructure, and attractive pricing."
+
+Battery costs have dropped 40% over the past two years, enabling automakers to offer EVs at prices competitive with internal combustion vehicles. The average EV now costs just $5,000 more than a comparable gas-powered vehicle, down from a $15,000 premium in 2022.
+
+Charging infrastructure is also expanding rapidly. The number of public charging stations in the United States has doubled in the past 18 months, with major investments from Rivian, Tesla, and traditional energy companies.
+
+Ford and GM have both announced they'll be EV-only by 2035, while several European automakers have committed to even earlier timelines. The shift is creating challenges for traditional auto suppliers but opportunities for battery manufacturers and charging network operators.`,
+                interests: ['automotive']
+            },
+            {
+                id: 8,
+                title: 'Streaming Services Report Mixed Results Amid Market Saturation',
+                source: 'Entertainment Weekly',
+                time: '4 hours ago',
+                category: 'Entertainment',
+                summary: 'Netflix gains subscribers while competitors struggle with profitability and subscriber churn.',
+                fullArticle: `The streaming wars continue to evolve as major platforms report divergent results, with market leader Netflix posting strong subscriber growth while competitors face challenges with profitability and subscriber retention.
+
+Netflix added 8.2 million subscribers in Q1 2026, beating analyst expectations and demonstrating the continued strength of its content strategy. The company's investment in international productions and its crackdown on password sharing have both contributed to growth.
+
+Disney+, while maintaining its position as the second-largest streaming service, reported slower subscriber growth and announced price increases to improve profitability. Warner Bros. Discovery's Max platform saw subscriber losses as the company continues to navigate post-merger integration challenges.
+
+Paramount Global announced it would be exploring strategic alternatives for its Paramount+ service, including potential partnerships or sales, as it struggles to achieve profitability in the competitive streaming landscape.
+
+"The streaming market is maturing," explains media analyst Michelle Chen. "The days of subscriber growth at any cost are over. Companies are now focused on profitability, which means higher prices, tighter content budgets, and potentially consolidation."
+
+Spotify continues to dominate music streaming but faces pressure from Apple Music and YouTube Music. The company reported strong user growth in emerging markets but acknowledged challenges in converting free users to paid subscribers in developed markets.
+
+Content costs remain a major concern for all platforms. Netflix alone is spending over $20 billion annually on original programming, while Disney+ has committed $30 billion across its various streaming services.
+
+Industry insiders predict further consolidation in the streaming sector, with smaller platforms either merging, shutting down, or being acquired by larger competitors. The next year could see the number of major streaming services shrink from the current nine to five or six dominant players.`,
+                interests: ['entertainment']
+            }
+        ];
+
+        const trendData = {
+            technology: [
+                { 
+                    title: 'AI Integration Boom', 
+                    description: 'Enterprises rapidly adopting AI across operations, driving 40% YoY growth in AI spending',
+                    news: 'Major tech companies report AI-driven revenue growth exceeding analyst expectations. Microsoft Azure AI services grew 45% quarter-over-quarter, while Google Cloud AI saw enterprise adoption triple. Nvidia announced record GPU demand with backorders extending through 2027. Analysts predict AI spending will reach $500B annually by 2028.'
+                },
+                { 
+                    title: 'Cloud Migration Accelerates', 
+                    description: '78% of companies now cloud-first, with multi-cloud strategies becoming standard',
+                    news: 'Enterprise cloud adoption reaches critical mass as 78% of Fortune 500 companies complete cloud-first transitions. AWS, Azure, and Google Cloud report combined revenue growth of 32% YoY. Hybrid and multi-cloud architectures now account for 65% of enterprise deployments, driven by cost optimization and redundancy needs.'
+                }
+            ],
+            food: [
+                { 
+                    title: 'Plant-Based Revolution', 
+                    description: 'Alternative protein market growing 35% annually as consumer preferences shift',
+                    news: 'Plant-based food sales surge 35% as major fast-food chains expand vegetarian offerings. Beyond Meat and Impossible Foods secure new partnerships with McDonald\'s and Burger King. Market research shows 40% of consumers now actively seeking plant-based options. Industry analysts project market to reach $85B by 2030.'
+                },
+                { 
+                    title: 'Delivery Optimization', 
+                    description: 'Ghost kitchens and automated delivery reshaping restaurant economics',
+                    news: 'Ghost kitchen model proves profitable as delivery-only restaurants reduce overhead by 60%. DoorDash and Uber Eats report 40% increase in ghost kitchen partnerships. Automated delivery robots now operational in 100+ cities, cutting delivery costs by 30%. Traditional restaurant chains opening ghost kitchen locations.'
+                }
+            ],
+            healthcare: [
+                { 
+                    title: 'Telehealth Mainstream', 
+                    description: 'Virtual care now 40% of all consultations, permanent shift from pandemic trend',
+                    news: 'Telehealth adoption stabilizes at 40% of total medical consultations, up from 5% pre-pandemic. UnitedHealth and CVS Health expand virtual care offerings with 24/7 availability. Medicare and Medicaid expand telehealth coverage permanently. AI-powered diagnostic tools improve virtual consultation accuracy by 25%.'
+                },
+                { 
+                    title: 'Gene Therapy Advances', 
+                    description: 'CRISPR-based treatments entering mainstream with 12 new approvals expected',
+                    news: 'FDA fast-tracks 12 CRISPR-based gene therapies for approval in 2026. Johnson & Johnson and Pfizer announce breakthrough results in clinical trials for sickle cell disease. Gene therapy market projected to reach $50B by 2030 as costs decrease and insurance coverage expands.'
+                }
+            ],
+            finance: [
+                { 
+                    title: 'Embedded Finance Growth', 
+                    description: 'Non-financial companies offering banking services, $7T opportunity by 2030',
+                    news: 'Embedded finance explodes as tech companies integrate banking services directly into platforms. Apple, Amazon, and Shopify launch full-service financial products. Market size projected to reach $7 trillion by 2030 as consumer preference shifts toward seamless integrated financial experiences.'
+                },
+                { 
+                    title: 'Crypto Integration', 
+                    description: 'Major banks launching digital asset services as institutional adoption grows',
+                    news: 'JPMorgan, Goldman Sachs, and Bank of America launch cryptocurrency trading platforms for institutional clients. Bitcoin ETFs surpass $100B in assets. Major corporations add Bitcoin to treasury reserves. 60% of institutional investors now holding or planning to hold digital assets.'
+                }
+            ],
+            energy: [
+                { 
+                    title: 'Green Hydrogen Boom', 
+                    description: 'Investment in hydrogen infrastructure up 300% as decarbonization accelerates',
+                    news: 'Green hydrogen investment surges 300% as governments and corporations commit to carbon-neutral goals. Chevron and Shell announce multi-billion dollar hydrogen projects. Technology improvements reduce production costs by 40%, making green hydrogen economically competitive with fossil fuels.'
+                },
+                { 
+                    title: 'Battery Breakthrough', 
+                    description: 'Solid-state batteries promising 2x capacity, commercial production starting 2027',
+                    news: 'Solid-state battery breakthrough promises to double EV range while halving charging time. Toyota, Samsung, and QuantumScape announce commercial production targets for 2027. New battery technology addresses safety concerns and extends lifespan to 1 million miles.'
+                }
+            ],
+            retail: [
+                { 
+                    title: 'Social Commerce Explosion', 
+                    description: 'Direct social media purchases growing 65% annually, reshaping e-commerce',
+                    news: 'Social commerce sales grow 65% YoY as Gen Z shifts purchasing to social platforms. TikTok Shop and Instagram Shopping drive $120B in direct sales. Traditional retailers scramble to adapt as social media becomes primary discovery and purchase channel. Influencer-driven sales now account for 30% of fashion purchases.'
+                },
+                { 
+                    title: 'Autonomous Delivery', 
+                    description: 'Self-driving delivery vehicles operational in 50+ cities, costs down 40%',
+                    news: 'Autonomous delivery vehicles now operational in 50+ US cities, reducing last-mile delivery costs by 40%. Amazon, Walmart, and FedEx deploy thousands of self-driving delivery robots. Industry projects autonomous delivery will handle 60% of urban deliveries by 2028.'
+                }
+            ],
+            automotive: [
+                { 
+                    title: 'EV Price Parity', 
+                    description: 'Electric vehicles now cost-competitive with gas cars in most segments',
+                    news: 'Electric vehicles reach price parity with gas cars as battery costs plummet 40%. Average EV now costs just $2,000 more than comparable ICE vehicle. Ford, GM, and Toyota accelerate EV production targets. Charging infrastructure expands to 500,000 public stations. Analysts predict EVs will outsell gas cars by 2028.'
+                },
+                { 
+                    title: 'Autonomous Progress', 
+                    description: 'Level 4 self-driving expanding to 20 cities, regulatory approvals accelerating',
+                    news: 'Level 4 autonomous vehicles receive regulatory approval in 20 major cities. Waymo and Cruise expand robotaxi services to 5 million residents. Tesla FSD reaches 99.9% safety milestone. Transportation experts predict autonomous ride-hailing will be cheaper than car ownership in major cities by 2027.'
+                }
+            ],
+            entertainment: [
+                { 
+                    title: 'Interactive Content', 
+                    description: 'Choose-your-own-adventure formats driving 2x engagement vs traditional streaming',
+                    news: 'Interactive streaming content drives 2x engagement compared to traditional formats. Netflix, Disney+, and Amazon invest $5B in interactive programming. Viewer decision-driven narratives increase watch time by 85%. Industry predicts 40% of premium content will include interactive elements by 2028.'
+                },
+                { 
+                    title: 'AI-Generated Media', 
+                    description: 'AI tools democratizing content creation, reshaping creative industries',
+                    news: 'AI-generated content reaches mainstream quality as tools become accessible to creators. YouTube reports 30% of new content includes AI-generated elements. Hollywood studios adopt AI for pre-visualization and effects, reducing costs by 50%. Regulatory debates intensify around AI content labeling.'
+                }
+            ]
+        };
+
+        // Initialize stock prices with change tracking
+        Object.keys(stockDatabase).forEach(symbol => {
+            stockDatabase[symbol].change = (Math.random() - 0.5) * 10;
+            stockDatabase[symbol].changePercent = (stockDatabase[symbol].change / stockDatabase[symbol].price) * 100;
+        });
+
+        // Setup screen logic
+        document.querySelectorAll('.interest-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const interest = card.dataset.interest;
+                
+                if (selectedInterests.has(interest)) {
+                    selectedInterests.delete(interest);
+                    card.classList.remove('selected');
+                } else {
+                    selectedInterests.add(interest);
+                    card.classList.add('selected');
+                }
+                
+                document.getElementById('startBtn').disabled = selectedInterests.size === 0;
+            });
+        });
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            initializeApp();
+        });
+
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            if (priceUpdateInterval) {
+                clearInterval(priceUpdateInterval);
+            }
+            document.getElementById('mainApp').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'flex';
+        });
+
+        document.getElementById('watchlistBtn').addEventListener('click', showWatchlist);
+
+        // Search functionality
+        document.getElementById('searchBtn').addEventListener('click', searchStock);
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchStock();
+        });
+
+        // Modal controls
+        document.getElementById('modalClose').addEventListener('click', () => {
+            document.getElementById('modal').classList.remove('active');
+        });
+
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') {
+                document.getElementById('modal').classList.remove('active');
+            }
+        });
+
+        function initializeApp() {
+            displayInterestTags();
+            loadRecommendedStocks();
+            loadMarketNews();
+            loadMarketTrends();
+            updateWatchlistCount();
+            
+            // Start live price updates every 3 seconds
+            if (priceUpdateInterval) {
+                clearInterval(priceUpdateInterval);
+            }
+            priceUpdateInterval = setInterval(updateStockPrices, 3000);
+        }
+
+        function displayInterestTags() {
+            const container = document.getElementById('interestTags');
+            container.innerHTML = '';
+            
+            const interestLabels = {
+                technology: '\u{1F4BB} Tech',
+                food: '\u{1F354} Food',
+                healthcare: '\u{2695}\u{FE0F} Health',
+                finance: '\u{1F4B0} Finance',
+                energy: '\u{26A1} Energy',
+                retail: '\u{1F6CD}\u{FE0F} Retail',
+                automotive: '\u{1F697} Auto',
+                entertainment: '\u{1F3AC} Media'
+            };
+            
+            selectedInterests.forEach(interest => {
+                const tag = document.createElement('div');
+                tag.className = 'interest-tag';
+                tag.textContent = interestLabels[interest];
+                container.appendChild(tag);
+            });
+        }
+
+        function loadRecommendedStocks() {
+            const container = document.getElementById('recommendedStocks');
+            container.innerHTML = '';
+            
+            const stocks = [];
+            selectedInterests.forEach(interest => {
+                if (interestStockMap[interest]) {
+                    stocks.push(...interestStockMap[interest]);
+                }
+            });
+
+            const uniqueStocks = [...new Set(stocks)].slice(0, 6);
+            
+            uniqueStocks.forEach(symbol => {
+                const data = stockDatabase[symbol];
+                if (data) {
+                    container.appendChild(createStockItem(symbol, data));
+                }
+            });
+        }
+
+        function searchStock() {
+            const searchInput = document.getElementById('searchInput');
+            const resultsDiv = document.getElementById('searchResults');
+            const query = searchInput.value.trim().toLowerCase();
+
+            if (!query) return;
+
+            resultsDiv.innerHTML = '';
+            resultsDiv.classList.add('active');
+
+            // Search by symbol, name, or keywords
+            const matches = Object.keys(stockDatabase).filter(symbol => {
+                const data = stockDatabase[symbol];
+                const symbolLower = symbol.toLowerCase();
+                const nameLower = data.name.toLowerCase();
+                
+                // Direct symbol match
+                if (symbolLower.includes(query)) return true;
+                
+                // Full or partial company name match
+                if (nameLower.includes(query)) return true;
+                
+                // Search by individual words in company name
+                const nameWords = nameLower.split(' ');
+                if (nameWords.some(word => word.includes(query) || query.includes(word))) return true;
+                
+                // Common alternate names and keywords
+                const keywords = {
+                    'apple': ['AAPL'],
+                    'microsoft': ['MSFT'],
+                    'google': ['GOOGL', 'GOOG'],
+                    'alphabet': ['GOOGL', 'GOOG'],
+                    'amazon': ['AMZN'],
+                    'facebook': ['META'],
+                    'meta': ['META'],
+                    'tesla': ['TSLA'],
+                    'nvidia': ['NVDA'],
+                    'amd': ['AMD'],
+                    'intel': ['INTC'],
+                    'netflix': ['NFLX'],
+                    'disney': ['DIS'],
+                    'walmart': ['WMT'],
+                    'mcdonalds': ['MCD'],
+                    'starbucks': ['SBUX'],
+                    'coca cola': ['KO'],
+                    'coke': ['KO'],
+                    'pepsi': ['PEP'],
+                    'jpmorgan': ['JPM'],
+                    'chase': ['JPM'],
+                    'bank of america': ['BAC'],
+                    'bofa': ['BAC'],
+                    'wells fargo': ['WFC'],
+                    'goldman': ['GS'],
+                    'goldman sachs': ['GS'],
+                    'morgan stanley': ['MS'],
+                    'visa': ['V'],
+                    'mastercard': ['MA'],
+                    'exxon': ['XOM'],
+                    'chevron': ['CVX'],
+                    'ford': ['F'],
+                    'gm': ['GM'],
+                    'general motors': ['GM'],
+                    'toyota': ['TM'],
+                    'pfizer': ['PFE'],
+                    'johnson': ['JNJ'],
+                    'merck': ['MRK'],
+                    'costco': ['COST'],
+                    'target': ['TGT'],
+                    'home depot': ['HD'],
+                    'berkshire': ['BRK'],
+                    'buffett': ['BRK'],
+                    'oracle': ['ORCL'],
+                    'adobe': ['ADBE'],
+                    'salesforce': ['CRM'],
+                    'cisco': ['CSCO'],
+                    'spotify': ['SPOT'],
+                    'rivian': ['RIVN'],
+                    'lucid': ['LCID'],
+                    'nike': ['NKE'],
+                    'boeing': ['BA']
+                };
+                
+                // Check if query matches any keyword
+                for (const [keyword, symbols] of Object.entries(keywords)) {
+                    if (keyword.includes(query) || query.includes(keyword)) {
+                        if (symbols.includes(symbol)) return true;
+                    }
+                }
+                
+                return false;
+            });
+
+            if (matches.length > 0) {
+                // Sort matches: exact symbol match first, then exact name match, then partial matches
+                matches.sort((a, b) => {
+                    const aData = stockDatabase[a];
+                    const bData = stockDatabase[b];
+                    const queryUpper = query.toUpperCase();
+                    
+                    // Exact symbol match gets priority
+                    if (a === queryUpper) return -1;
+                    if (b === queryUpper) return 1;
+                    
+                    // Exact name match gets second priority
+                    if (aData.name.toLowerCase() === query) return -1;
+                    if (bData.name.toLowerCase() === query) return 1;
+                    
+                    // Name starts with query
+                    if (aData.name.toLowerCase().startsWith(query)) return -1;
+                    if (bData.name.toLowerCase().startsWith(query)) return 1;
+                    
+                    // Alphabetical by symbol
+                    return a.localeCompare(b);
+                });
+                
+                matches.slice(0, 8).forEach(symbol => {
+                    const data = stockDatabase[symbol];
+                    resultsDiv.appendChild(createStockItem(symbol, data));
+                });
+                
+                if (matches.length > 8) {
+                    const moreDiv = document.createElement('div');
+                    moreDiv.style.cssText = 'text-align: center; padding: 15px; color: var(--text-secondary); font-size: 0.9em;';
+                    moreDiv.textContent = `+${matches.length - 8} more results. Try a more specific search.`;
+                    resultsDiv.appendChild(moreDiv);
+                }
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="error-message">
+                        No stocks found for "${searchInput.value}". 
+                        <br><br>
+                        Try searching by:
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>Stock symbol (AAPL, MSFT, TSLA)</li>
+                            <li>Company name (Apple, Microsoft, Tesla)</li>
+                            <li>Partial name (Intel, Amazon, Nike)</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+
+        function createStockItem(symbol, data) {
+            const item = document.createElement('div');
+            item.className = 'stock-item';
+            item.dataset.symbol = symbol;
+            
+            const changeClass = data.change >= 0 ? 'positive' : 'negative';
+            const changeSymbol = data.change >= 0 ? '▲' : '▼';
+            const isWatchlisted = watchlist.includes(symbol);
+            
+            item.innerHTML = `
+                <button class="watchlist-star ${isWatchlisted ? 'active' : ''}" data-symbol="${symbol}" onclick="toggleWatchlist('${symbol}', event)">
+                    ${isWatchlisted ? '★' : '☆'}
+                </button>
+                <div class="stock-info" style="flex: 1;">
+                    <div class="stock-symbol">${symbol}</div>
+                    <div class="stock-name">${data.name}</div>
+                </div>
+                <div class="stock-price-info">
+                    <div class="price">$<span data-symbol="${symbol}">${data.price.toFixed(2)}</span></div>
+                    <div class="change ${changeClass}" data-symbol="${symbol}-change">
+                        ${changeSymbol} ${Math.abs(data.change).toFixed(2)} (${Math.abs(data.changePercent).toFixed(2)}%)
+                    </div>
+                </div>
+            `;
+            
+            item.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('watchlist-star')) {
+                    showStockDetails(symbol, data);
+                }
+            });
+            
+            return item;
+        }
+
+        function updateStockPrices() {
+            Object.keys(stockDatabase).forEach(symbol => {
+                const data = stockDatabase[symbol];
+                const oldPrice = data.price;
+                
+                // Simulate realistic price movement
+                const changePercent = (Math.random() - 0.5) * data.volatility;
+                data.price *= (1 + changePercent);
+                data.change = data.price - oldPrice + data.change;
+                data.changePercent = (data.change / (data.price - data.change)) * 100;
+                
+                // Update UI if element exists
+                const priceElement = document.querySelector(`span[data-symbol="${symbol}"]`);
+                const changeElement = document.querySelector(`div[data-symbol="${symbol}-change"]`);
+                
+                if (priceElement) {
+                    const stockItem = priceElement.closest('.stock-item');
+                    if (stockItem) {
+                        stockItem.classList.add('updating');
+                        setTimeout(() => stockItem.classList.remove('updating'), 500);
+                    }
+                    
+                    priceElement.textContent = data.price.toFixed(2);
+                }
+                
+                if (changeElement) {
+                    const isPositive = data.change >= 0;
+                    changeElement.className = `change ${isPositive ? 'positive' : 'negative'}`;
+                    changeElement.setAttribute('data-symbol', `${symbol}-change`);
+                    changeElement.textContent = `${isPositive ? '▲' : '▼'} ${Math.abs(data.change).toFixed(2)} (${Math.abs(data.changePercent).toFixed(2)}%)`;
+                }
+            });
+        }
+
+        function toggleWatchlist(symbol, event) {
+            event.stopPropagation();
+            
+            const index = watchlist.indexOf(symbol);
+            if (index > -1) {
+                watchlist.splice(index, 1);
+            } else {
+                watchlist.push(symbol);
+            }
+            
+            localStorage.setItem('stock_watchlist', JSON.stringify(watchlist));
+            
+            // Update all star buttons for this symbol
+            document.querySelectorAll(`button[data-symbol="${symbol}"]`).forEach(btn => {
+                const isWatchlisted = watchlist.includes(symbol);
+                btn.classList.toggle('active', isWatchlisted);
+                btn.textContent = isWatchlisted ? '★' : '☆';
+            });
+            
+            updateWatchlistCount();
+        }
+
+        function updateWatchlistCount() {
+            const countElement = document.getElementById('watchlistCount');
+            if (watchlist.length > 0) {
+                countElement.textContent = watchlist.length;
+                countElement.style.display = 'inline-flex';
+            } else {
+                countElement.style.display = 'none';
+            }
+        }
+
+        function showWatchlist() {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = '⭐ Your Watchlist';
+            
+            if (watchlist.length === 0) {
+                modalBody.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">☆</div>
+                        <p>No stocks in your watchlist yet.</p>
+                        <p style="margin-top: 10px; font-size: 0.9em;">Click the star icon (☆) on any stock to add it!</p>
+                    </div>
+                `;
+            } else {
+                const stocksHTML = [];
+                watchlist.forEach(symbol => {
+                    const data = stockDatabase[symbol];
+                    if (data) {
+                        const changeClass = data.change >= 0 ? 'positive' : 'negative';
+                        const changeSymbol = data.change >= 0 ? '▲' : '▼';
+                        
+                        stocksHTML.push(`
+                            <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; margin-bottom: 12px; cursor: pointer; border: 1px solid var(--border-color); transition: all 0.3s;"
+                                 onclick="closeModalAndShowStock('${symbol}')"
+                                 onmouseover="this.style.borderColor='var(--accent-green)'"
+                                 onmouseout="this.style.borderColor='var(--border-color)'">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-family: 'Space Mono', monospace; font-weight: 700; font-size: 1.1em;">${symbol}</div>
+                                        <div style="color: var(--text-secondary); font-size: 0.85em; margin-top: 3px;">${data.name}</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-family: 'Space Mono', monospace; font-weight: 700; font-size: 1.2em;">$${data.price.toFixed(2)}</div>
+                                        <div class="change ${changeClass}" style="font-size: 0.9em; margin-top: 3px;">
+                                            ${changeSymbol} ${Math.abs(data.change).toFixed(2)} (${Math.abs(data.changePercent).toFixed(2)}%)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                    }
+                });
+                
+                modalBody.innerHTML = stocksHTML.join('');
+            }
+            
+            modal.classList.add('active');
+        }
+
+        function closeModalAndShowStock(symbol) {
+            document.getElementById('modal').classList.remove('active');
+            setTimeout(() => {
+                showStockDetails(symbol, stockDatabase[symbol]);
+            }, 300);
+        }
+
+        function showStockDetails(symbol, data) {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = `${symbol} - ${data.name}`;
+            
+            // Find relevant news
+            const relevantNews = newsDatabase.filter(news => 
+                news.interests.includes(data.sector)
+            ).slice(0, 3);
+
+            let newsHTML = '';
+            if (relevantNews.length > 0) {
+                newsHTML = '<h3 style="margin-top: 20px; color: var(--accent-green); margin-bottom: 15px;">Related News</h3>';
+                relevantNews.forEach(news => {
+                    newsHTML += `
+                        <div style="margin: 15px 0; padding: 18px; background: var(--bg-secondary); border-radius: 12px; cursor: pointer; border: 1px solid var(--border-color); transition: all 0.3s;" 
+                             onclick="showNewsDetail(${news.id})"
+                             onmouseover="this.style.borderColor='var(--accent-green)'; this.style.transform='translateX(5px)'"
+                             onmouseout="this.style.borderColor='var(--border-color)'; this.style.transform='translateX(0)'">
+                            <div style="font-weight: 600; margin-bottom: 8px; color: var(--text-primary);">${news.title}</div>
+                            <div style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6;">${news.summary}</div>
+                            <div style="margin-top: 10px; font-size: 0.85em; color: var(--accent-blue);">
+                                ${news.source} • ${news.time}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            modalBody.innerHTML = `
+                <div style="margin-bottom: 25px; padding: 25px; background: var(--bg-secondary); border-radius: 12px;">
+                    <div style="font-size: 2.5em; font-weight: 700; color: var(--accent-green); margin-bottom: 10px;">$${data.price.toFixed(2)}</div>
+                    <div style="font-size: 1.3em; color: ${data.change >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}; margin-bottom: 15px;">
+                        ${data.change >= 0 ? '▲' : '▼'} ${Math.abs(data.change).toFixed(2)} (${Math.abs(data.changePercent).toFixed(2)}%)
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                        <div>
+                            <div style="color: var(--text-secondary); font-size: 0.85em; margin-bottom: 5px;">Sector</div>
+                            <div style="color: var(--text-primary); font-weight: 600; text-transform: capitalize;">${data.sector}</div>
+                        </div>
+                        <div>
+                            <div style="color: var(--text-secondary); font-size: 0.85em; margin-bottom: 5px;">Volatility</div>
+                            <div style="color: var(--text-primary); font-weight: 600;">${(data.volatility * 100).toFixed(2)}%</div>
+                        </div>
+                    </div>
+                </div>
+                ${newsHTML}
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function showNewsDetail(newsId) {
+            const news = newsDatabase.find(n => n.id === newsId);
+            if (!news) return;
+
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = news.title;
+            
+            modalBody.innerHTML = `
+                <div style="margin-bottom: 20px; padding: 15px; background: var(--bg-secondary); border-radius: 10px;">
+                    <div style="color: var(--accent-green); font-weight: 600; margin-bottom: 5px;">${news.source}</div>
+                    <div style="color: var(--text-secondary); font-size: 0.9em;">
+                        ${news.time} • ${news.category}
+                    </div>
+                </div>
+                <div style="color: var(--text-secondary); line-height: 1.9; font-size: 1.05em;">
+                    ${news.fullArticle.split('\n\n').map(para => `<p style="margin-bottom: 20px;">${para}</p>`).join('')}
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        function loadMarketNews() {
+            const container = document.getElementById('latestNews');
+            container.innerHTML = '';
+            
+            // Filter news based on interests
+            let relevantNews = newsDatabase.filter(news => 
+                news.interests.some(interest => selectedInterests.has(interest))
+            );
+
+            // If no relevant news, show all
+            if (relevantNews.length === 0) {
+                relevantNews = newsDatabase;
+            }
+
+            relevantNews.slice(0, 6).forEach(news => {
+                const newsItem = document.createElement('div');
+                newsItem.className = 'news-item';
+                
+                newsItem.innerHTML = `
+                    <div class="news-title">${news.title}</div>
+                    <div class="news-meta">
+                        <span class="news-source">${news.source}</span>
+                        <span>${news.time}</span>
+                        <span>${news.category}</span>
+                    </div>
+                    <div class="news-summary">${news.summary}</div>
+                `;
+                
+                newsItem.addEventListener('click', () => showNewsDetail(news.id));
+                container.appendChild(newsItem);
+            });
+        }
+
+        function loadMarketTrends() {
+            const container = document.getElementById('marketTrends');
+            container.innerHTML = '';
+            
+            const trends = [];
+            selectedInterests.forEach(interest => {
+                if (trendData[interest]) {
+                    trends.push(...trendData[interest]);
+                }
+            });
+            
+            const displayTrends = trends.length > 0 ? trends : Object.values(trendData).flat().slice(0, 4);
+            
+            displayTrends.slice(0, 4).forEach(trend => {
+                const item = document.createElement('div');
+                item.className = 'trend-item';
+                item.innerHTML = `
+                    <div class="trend-title">${trend.title}</div>
+                    <div class="trend-description">${trend.description}</div>
+                `;
+                
+                item.addEventListener('click', () => showTrendDetail(trend));
+                container.appendChild(item);
+            });
+        }
+
+        function showTrendDetail(trend) {
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = trend.title;
+            
+            modalBody.innerHTML = `
+                <div style="margin-bottom: 20px; padding: 20px; background: var(--bg-secondary); border-radius: 12px; border-left: 4px solid var(--accent-blue);">
+                    <div style="color: var(--accent-blue); font-weight: 700; font-size: 1.1em; margin-bottom: 10px;">Market Trend Overview</div>
+                    <div style="color: var(--text-secondary); line-height: 1.6;">${trend.description}</div>
+                </div>
+                <div style="color: var(--text-secondary); line-height: 1.9; font-size: 1.05em;">
+                    ${trend.news}
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        // Make functions available globally
+        window.toggleWatchlist = toggleWatchlist;
+        window.showStockDetails = showStockDetails;
+        window.showNewsDetail = showNewsDetail;
+        window.closeModalAndShowStock = closeModalAndShowStock;
+        window.showTrendDetail = showTrendDetail;
+    </script>
+</body>
+</html>
