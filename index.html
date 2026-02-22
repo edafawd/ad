@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<href="favicon-16x16.png" type="image/x-icon"> 
 <title>LiveStock</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#0a0e27;color:#e8eaed;min-height:100vh}
@@ -26,13 +26,12 @@ body{font-family:Arial,sans-serif;background:#0a0e27;color:#e8eaed;min-height:10
 .ai-panel{margin-top:12px;padding:12px 14px;background:rgba(52,152,219,.07);border:1px solid rgba(52,152,219,.25);border-radius:8px;animation:fadeIn .4s ease}
 .spin{width:10px;height:10px;border:2px solid #2d3561;border-top-color:#00ff88;border-radius:50%;animation:rot .7s linear infinite;display:inline-block;flex-shrink:0}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(5px);z-index:1000;display:flex;justify-content:center;align-items:center;padding:20px}
-.modal-box{background:#1a2142;border:2px solid #2d3561;border-radius:16px;padding:28px;max-width:600px;width:100%;max-height:82vh;overflow-y:auto;position:relative}
+.modal-box{background:#1a2142;border:2px solid #2d3561;border-radius:16px;padding:28px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;position:relative}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
 @media(max-width:700px){.grid2{grid-template-columns:1fr}}
 input{background:#151b3d;border:2px solid #2d3561;color:#e8eaed;padding:13px 17px;border-radius:10px;font-size:.97em;font-family:Arial,sans-serif;outline:none;flex:1;transition:border-color .2s}
 input:focus{border-color:#00ff88}
 .btn-g{background:#00ff88;color:#0a0e27;border:none;padding:13px 26px;border-radius:10px;font-size:.97em;font-weight:700;cursor:pointer;white-space:nowrap}
-.btn-g:disabled{opacity:.5;cursor:not-allowed}
 .chip{background:rgba(0,255,136,.1);border:1px solid #00ff88;color:#00ff88;padding:4px 11px;border-radius:20px;font-size:.79em;font-weight:600}
 #sDrop{position:absolute;top:100%;left:0;right:0;background:#1a2142;border:1px solid #2d3561;border-top:none;border-radius:0 0 10px 10px;z-index:200;max-height:260px;overflow-y:auto;display:none}
 .sug{padding:10px 14px;cursor:pointer;font-size:.9em;display:flex;justify-content:space-between;transition:background .15s}
@@ -42,47 +41,40 @@ input:focus{border-color:#00ff88}
 .sect-btn.on{background:rgba(0,255,136,.1);border-color:#00ff88;box-shadow:0 0 20px rgba(0,255,136,.2)}
 .empty{text-align:center;padding:32px;color:#9ba3af}
 .err{color:#ff4757;font-size:.85em;margin-top:8px;padding:8px 12px;background:rgba(255,71,87,.1);border-radius:6px;border:1px solid rgba(255,71,87,.3)}
+.range-btn{background:transparent;border:1px solid #2d3561;color:#9ba3af;padding:4px 10px;border-radius:6px;font-size:.78em;font-weight:700;cursor:pointer;transition:all .2s}
+.range-btn:hover{border-color:#00ff88;color:#00ff88}
+.range-btn.active{background:rgba(0,255,136,.15);border-color:#00ff88;color:#00ff88}
+.chart-tooltip{position:absolute;background:#1a2142;border:1px solid #2d3561;border-radius:8px;padding:8px 12px;font-size:.78em;pointer-events:none;display:none;z-index:10;min-width:120px}
 </style>
 </head>
 <body>
 <div class="bgpat"></div>
 
-<!-- ══════════ SETUP ══════════ -->
 <div id="setupScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1">
   <div class="card" style="max-width:700px;width:100%;padding:48px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
     <div style="font-size:2.2em;font-weight:700;color:#00ff88;margin-bottom:8px;letter-spacing:2px">&#128200; LIVESTOCK</div>
     <p style="color:#9ba3af;margin-bottom:36px;font-size:1.05em">Real-time market intelligence. Pick your sectors to personalise your dashboard.</p>
     <div id="sectGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:14px;margin-bottom:30px"></div>
-    <button id="startBtn" onclick="startApp()" disabled
-      style="width:100%;background:#2d3561;color:#4a5568;border:none;padding:17px;border-radius:12px;font-size:1.08em;font-weight:700;cursor:not-allowed;letter-spacing:1px;transition:all .25s">
-      START TRACKING
-    </button>
+    <button id="startBtn" onclick="startApp()" disabled style="width:100%;background:#2d3561;color:#4a5568;border:none;padding:17px;border-radius:12px;font-size:1.08em;font-weight:700;cursor:not-allowed;letter-spacing:1px;transition:all .25s">START TRACKING</button>
   </div>
 </div>
 
-<!-- ══════════ APP ══════════ -->
 <div id="appScreen" style="display:none">
 <div class="wrap">
-
-  <!-- HEADER -->
   <div class="card" style="padding:22px 28px;margin-bottom:22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
     <div>
       <div style="font-size:1.75em;font-weight:700;color:#00ff88;letter-spacing:2px">&#128200; LIVESTOCK</div>
       <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,136,.1);border:1px solid #00ff88;padding:4px 11px;border-radius:20px;font-size:.79em;font-weight:600;margin-top:6px">
-        <span style="width:7px;height:7px;background:#00ff88;border-radius:50%;animation:blink 2s infinite;display:inline-block"></span>
-        LIVE
+        <span style="width:7px;height:7px;background:#00ff88;border-radius:50%;animation:blink 2s infinite;display:inline-block"></span>LIVE
       </div>
     </div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <div id="hChips" style="display:flex;gap:7px;flex-wrap:wrap"></div>
-      <button onclick="toggleWLPanel()" style="background:#151b3d;border:2px solid #ffd93d;color:#ffd93d;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.87em;font-weight:600">
-        &#11088; Watchlist <span id="wlBadge"></span>
-      </button>
+      <button onclick="toggleWLPanel()" style="background:#151b3d;border:2px solid #ffd93d;color:#ffd93d;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.87em;font-weight:600">&#11088; Watchlist <span id="wlBadge"></span></button>
       <button onclick="goSetup()" style="background:#151b3d;border:2px solid #2d3561;color:#e8eaed;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.87em;font-weight:600">&#9881; Settings</button>
     </div>
   </div>
 
-  <!-- WATCHLIST PANEL -->
   <div id="wlPanel" style="display:none;margin-bottom:22px">
     <div class="card">
       <div style="font-weight:700;font-size:1.1em;margin-bottom:16px">&#11088; Watchlist</div>
@@ -90,22 +82,20 @@ input:focus{border-color:#00ff88}
     </div>
   </div>
 
-  <!-- SEARCH -->
   <div class="card" style="margin-bottom:22px">
     <div style="background:rgba(52,152,219,.1);border:1px solid #3498db;padding:10px 14px;border-radius:8px;margin-bottom:13px;font-size:.86em">
-      &#128269; <strong>Search any stock in the world</strong> — type a ticker (AAPL, TSLA) or company name. Live data fetched instantly.
+      &#128269; <strong>Search any stock in the world</strong> — type a ticker (AAPL, TSLA) or company name.
     </div>
     <div style="display:flex;gap:9px;position:relative">
       <div style="position:relative;flex:1">
         <input id="sInput" placeholder="Type any ticker or company name..." oninput="onType()" onkeydown="if(event.key==='Enter')doSearch()" onblur="setTimeout(closeDrop,200)">
         <div id="sDrop"></div>
       </div>
-      <button class="btn-g" id="sBtn" onclick="doSearch()">Search</button>
+      <button class="btn-g" onclick="doSearch()">Search</button>
     </div>
     <div id="sResults"></div>
   </div>
 
-  <!-- PORTFOLIO + TRENDS -->
   <div class="grid2">
     <div class="card">
       <div style="font-weight:700;font-size:1.1em;margin-bottom:16px;display:flex;align-items:center;gap:9px">
@@ -120,16 +110,13 @@ input:focus{border-color:#00ff88}
     </div>
   </div>
 
-  <!-- NEWS -->
   <div class="card" style="margin-bottom:30px">
     <div style="font-weight:700;font-size:1.1em;margin-bottom:16px">&#128240; Market News</div>
     <div id="newsCont"></div>
   </div>
-
 </div>
 </div>
 
-<!-- MODAL -->
 <div id="modalBg" class="modal-bg" style="display:none" onclick="closeModal()">
   <div class="modal-box" onclick="event.stopPropagation()">
     <button onclick="closeModal()" style="position:absolute;top:16px;right:16px;background:#151b3d;border:2px solid #2d3561;color:#e8eaed;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.3em">&#215;</button>
@@ -138,9 +125,7 @@ input:focus{border-color:#00ff88}
 </div>
 
 <script>
-// ─── SECTOR CONFIG ────────────────────────────────────────────────────────────
-// These are just the default tickers shown in your portfolio — NOT a hardcoded search list
-const SECTORS = {
+var SECTORS = {
   technology:    { icon:"💻", tickers:["AAPL","MSFT","NVDA","GOOGL","META"] },
   food:          { icon:"🍔", tickers:["MCD","SBUX","KO","PEP","CMG"] },
   healthcare:    { icon:"⚕️", tickers:["JNJ","UNH","LLY","PFE","ABBV"] },
@@ -148,377 +133,547 @@ const SECTORS = {
   energy:        { icon:"⚡", tickers:["XOM","CVX","COP","SLB","EOG"] },
   retail:        { icon:"🛍️", tickers:["AMZN","WMT","HD","COST","TGT"] },
   automotive:    { icon:"🚗", tickers:["TSLA","F","GM","TM","RIVN"] },
-  entertainment: { icon:"🎬", tickers:["DIS","NFLX","SPOT","WBD","RBLX"] },
+  entertainment: { icon:"🎬", tickers:["DIS","NFLX","SPOT","WBD","RBLX"] }
 };
 
-const NEWS = [
-  {id:1,title:"Tech Giants Report Strong Q4 Earnings Amid AI Boom",source:"Financial Times",time:"2h ago",cat:"Technology",summary:"Major technology companies exceeded analyst expectations, driven by AI investments and cloud computing growth.",sectors:["technology"],prompt:"Tech Giants Q4 earnings beat driven by AI and cloud — Apple, Microsoft, Google, Nvidia all outperformed. Which stocks benefit most, valuation impact, and key risks?"},
-  {id:2,title:"Fast Food Chains Embrace Sustainability Initiatives",source:"Bloomberg",time:"4h ago",cat:"Food",summary:"Leading restaurant brands announce ambitious plans to reduce environmental impact.",sectors:["food"],prompt:"McDonald's, Starbucks, Chipotle launching major sustainability drives. Cost impact on margins, ESG appeal, and which chains are best positioned?"},
-  {id:3,title:"Breakthrough Gene Therapy Receives FDA Approval",source:"Medical News Today",time:"1h ago",cat:"Healthcare",summary:"New CRISPR treatment marks a significant milestone in personalised medicine.",sectors:["healthcare"],prompt:"FDA approves CRISPR-based gene therapy. Which biotech stocks are affected, market size, and regulatory precedent?"},
-  {id:4,title:"Major Banks Announce Digital Transformation Push",source:"Wall Street Journal",time:"3h ago",cat:"Finance",summary:"Banks investing billions in fintech capabilities to compete with digital challengers.",sectors:["finance"],prompt:"JPMorgan, Goldman, BofA investing billions in fintech. Which banks are best positioned, fintech risk, and ROI timeline?"},
-  {id:5,title:"Renewable Energy Investment Reaches Record Levels",source:"Energy Today",time:"5h ago",cat:"Energy",summary:"Global solar and wind investment surpasses fossil fuel spending for the first time.",sectors:["energy"],prompt:"Renewable energy investment surpasses fossil fuels globally. Energy stocks most affected, policy tailwinds, and transition risks for oil majors?"},
-  {id:6,title:"E-Commerce Giants Battle for Same-Day Delivery",source:"Retail Week",time:"6h ago",cat:"Retail",summary:"Amazon, Walmart and Target expand rapid delivery networks.",sectors:["retail"],prompt:"Amazon, Walmart, Target racing to build same-day delivery infrastructure. Capex burden, competitive moat, and who has the edge?"},
-  {id:7,title:"Electric Vehicle Sales Surge Past Expectations",source:"Automotive News",time:"3h ago",cat:"Automotive",summary:"EVs now account for 30% of new car sales globally.",sectors:["automotive"],prompt:"EV market share hits 30% of new car sales. Tesla vs legacy OEM positioning, battery supply chain, and biggest risk to growth?"},
-  {id:8,title:"Streaming Services Report Mixed Results",source:"Entertainment Weekly",time:"4h ago",cat:"Entertainment",summary:"Netflix gains subscribers while competitors struggle with profitability.",sectors:["entertainment"],prompt:"Netflix growing while Disney+, Paramount, WBD struggle. Consolidation likelihood, stocks to watch, and what saturation signals?"},
+var NEWS = [
+  {id:1,title:"Tech Giants Report Strong Q4 Earnings Amid AI Boom",source:"Financial Times",time:"2h ago",cat:"Technology",summary:"Major technology companies exceeded analyst expectations, driven by AI investments and cloud computing growth.",sectors:["technology"],prompt:"Tech Giants Q4 earnings beat driven by AI and cloud."},
+  {id:2,title:"Fast Food Chains Embrace Sustainability Initiatives",source:"Bloomberg",time:"4h ago",cat:"Food",summary:"Leading restaurant brands announce ambitious plans to reduce environmental impact.",sectors:["food"],prompt:"McDonald's, Starbucks, Chipotle launching major sustainability drives."},
+  {id:3,title:"Breakthrough Gene Therapy Receives FDA Approval",source:"Medical News Today",time:"1h ago",cat:"Healthcare",summary:"New CRISPR treatment marks a significant milestone in personalised medicine.",sectors:["healthcare"],prompt:"FDA approves CRISPR-based gene therapy. Which biotech stocks are affected?"},
+  {id:4,title:"Major Banks Announce Digital Transformation Push",source:"Wall Street Journal",time:"3h ago",cat:"Finance",summary:"Banks investing billions in fintech capabilities to compete with digital challengers.",sectors:["finance"],prompt:"JPMorgan, Goldman, BofA investing billions in fintech."},
+  {id:5,title:"Renewable Energy Investment Reaches Record Levels",source:"Energy Today",time:"5h ago",cat:"Energy",summary:"Global solar and wind investment surpasses fossil fuel spending for the first time.",sectors:["energy"],prompt:"Renewable energy investment surpasses fossil fuels globally."},
+  {id:6,title:"E-Commerce Giants Battle for Same-Day Delivery",source:"Retail Week",time:"6h ago",cat:"Retail",summary:"Amazon, Walmart and Target expand rapid delivery networks.",sectors:["retail"],prompt:"Amazon, Walmart, Target racing to build same-day delivery infrastructure."},
+  {id:7,title:"Electric Vehicle Sales Surge Past Expectations",source:"Automotive News",time:"3h ago",cat:"Automotive",summary:"EVs now account for 30% of new car sales globally.",sectors:["automotive"],prompt:"EV market share hits 30% of new car sales."},
+  {id:8,title:"Streaming Services Report Mixed Results",source:"Entertainment Weekly",time:"4h ago",cat:"Entertainment",summary:"Netflix gains subscribers while competitors struggle with profitability.",sectors:["entertainment"],prompt:"Netflix growing while Disney+, Paramount, WBD struggle."}
 ];
 
-const TRENDS = [
-  {id:"t1",title:"AI Integration Boom",desc:"Enterprises adopting AI rapidly — 40% YoY growth in AI spending",sectors:["technology"],prompt:"Enterprise AI adoption boom with NVIDIA, Microsoft Azure AI, Google Cloud AI. Which stocks benefit most and key risks?"},
-  {id:"t2",title:"Cloud Migration Accelerates",desc:"78% of companies now cloud-first with multi-cloud strategies",sectors:["technology"],prompt:"Cloud-first adoption with multi-cloud across AWS, Azure, GCP. Competitive dynamics, margin implications, and top stock picks?"},
-  {id:"t3",title:"Plant-Based Revolution",desc:"Alternative protein market growing 35% annually",sectors:["food"],prompt:"Plant-based food market growing 35% YoY. Who wins, who loses among food stocks, and profitability outlook?"},
-  {id:"t4",title:"Telehealth Goes Mainstream",desc:"Virtual care now 40% of all consultations",sectors:["healthcare"],prompt:"Telehealth now 40% of consultations. Reimbursement trends, competitive moats, and key investment plays?"},
-  {id:"t5",title:"Embedded Finance Growth",desc:"Non-financial companies offering banking — a $7T opportunity by 2030",sectors:["finance"],prompt:"Embedded finance: Apple, Amazon, Shopify offering banking. Disruption risk to traditional banks and top stock plays?"},
-  {id:"t6",title:"Green Hydrogen Boom",desc:"Hydrogen infrastructure investment up 300% as decarbonisation accelerates",sectors:["energy"],prompt:"Green hydrogen investment up 300%. Cost competitiveness timeline and best-positioned stocks?"},
-  {id:"t7",title:"Social Commerce Explosion",desc:"Direct social media purchases growing 65% annually",sectors:["retail"],prompt:"Social commerce via TikTok Shop, Instagram growing 65% YoY. Which retailers win and what does this mean for Amazon?"},
-  {id:"t8",title:"EV Price Parity",desc:"Electric vehicles now cost-competitive with gas cars",sectors:["automotive"],prompt:"EV price parity achieved. Demand catalyst, margin pressure, and who profits most from Ford, GM, Tesla?"},
-  {id:"t9",title:"Interactive Streaming",desc:"Choose-your-own-adventure formats drive 2x engagement",sectors:["entertainment"],prompt:"Interactive streaming content doubles engagement. Production costs, advertiser appeal, and competitive differentiation?"},
+var TRENDS = [
+  {id:"t1",title:"AI Integration Boom",desc:"Enterprises adopting AI rapidly — 40% YoY growth in AI spending",sectors:["technology"],prompt:"Enterprise AI adoption boom with NVIDIA, Microsoft Azure AI, Google Cloud AI."},
+  {id:"t2",title:"Cloud Migration Accelerates",desc:"78% of companies now cloud-first with multi-cloud strategies",sectors:["technology"],prompt:"Cloud-first adoption with multi-cloud across AWS, Azure, GCP."},
+  {id:"t3",title:"Plant-Based Revolution",desc:"Alternative protein market growing 35% annually",sectors:["food"],prompt:"Plant-based food market growing 35% YoY."},
+  {id:"t4",title:"Telehealth Goes Mainstream",desc:"Virtual care now 40% of all consultations",sectors:["healthcare"],prompt:"Telehealth now 40% of consultations."},
+  {id:"t5",title:"Embedded Finance Growth",desc:"Non-financial companies offering banking — a $7T opportunity by 2030",sectors:["finance"],prompt:"Embedded finance: Apple, Amazon, Shopify offering banking."},
+  {id:"t6",title:"Green Hydrogen Boom",desc:"Hydrogen infrastructure investment up 300% as decarbonisation accelerates",sectors:["energy"],prompt:"Green hydrogen investment up 300%."},
+  {id:"t7",title:"Social Commerce Explosion",desc:"Direct social media purchases growing 65% annually",sectors:["retail"],prompt:"Social commerce via TikTok Shop, Instagram growing 65% YoY."},
+  {id:"t8",title:"EV Price Parity",desc:"Electric vehicles now cost-competitive with gas cars",sectors:["automotive"],prompt:"EV price parity achieved."},
+  {id:"t9",title:"Interactive Streaming",desc:"Choose-your-own-adventure formats drive 2x engagement",sectors:["entertainment"],prompt:"Interactive streaming content doubles engagement."}
 ];
 
-// ─── STATE ────────────────────────────────────────────────────────────────────
-let interests = new Set();
-let watchlist = [];
-let stockCache = {};   // sym -> {name, price, change, pct, sector}
-let tickerIntervals = {};
-let aiCache = {};
+var interests = new Set();
+var watchlist = [];
+var stockCache = {};
+var sparkCache = {};
+var chartDataCache = {};
+var tickerIntervals = {};
+var aiCache = {};
+var activeChart = null;
+var activeChartSym = null;
+var activeRange = "1M";
 
-// ─── YAHOO FINANCE FETCH (via allorigins CORS proxy) ─────────────────────────
-// Fetches REAL live data for any ticker in the world
+function fmt(n) {
+  if (n == null) return "—";
+  return n.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function fmtVol(n) {
+  if (n == null) return "—";
+  if (n >= 1e9) return (n/1e9).toFixed(2) + "B";
+  if (n >= 1e6) return (n/1e6).toFixed(2) + "M";
+  if (n >= 1e3) return (n/1e3).toFixed(1) + "K";
+  return n.toString();
+}
+
 async function fetchQuote(sym) {
   if (stockCache[sym]) return stockCache[sym];
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  const res = await fetch(proxy);
-  const wrapper = await res.json();
-  const data = JSON.parse(wrapper.contents);
-  const q = data.chart.result[0];
-  const meta = q.meta;
-  const price = meta.regularMarketPrice;
-  const prev  = meta.chartPreviousClose || meta.previousClose || price;
-  const change = price - prev;
-  const pct    = (change / prev) * 100;
-  const rec = {
-    name:   meta.longName || meta.shortName || sym,
-    price,
-    change,
-    pct,
-    sector: meta.sector || "—",
-    currency: meta.currency || "USD",
+  var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + sym + "?interval=1d&range=1d";
+  var proxy = "https://api.allorigins.win/get?url=" + encodeURIComponent(url);
+  var res = await fetch(proxy);
+  var wrapper = await res.json();
+  var data = JSON.parse(wrapper.contents);
+  var meta = data.chart.result[0].meta;
+  var price = meta.regularMarketPrice;
+  var prev = meta.chartPreviousClose || meta.previousClose || price;
+  var change = price - prev;
+  var rec = {
+    name: meta.longName || meta.shortName || sym,
+    price: price, change: change, pct: (change/prev)*100,
+    sector: meta.sector || "—", currency: meta.currency || "USD",
+    mktCap: meta.marketCap || null, volume: meta.regularMarketVolume || null
   };
   stockCache[sym] = rec;
   return rec;
 }
 
-// Search suggestions via Yahoo Finance autocomplete
+var RANGES = {
+  "1W": {range:"5d",  interval:"1d"},
+  "1M": {range:"1mo", interval:"1d"},
+  "3M": {range:"3mo", interval:"1d"},
+  "6M": {range:"6mo", interval:"1wk"},
+  "1Y": {range:"1y",  interval:"1wk"}
+};
+
+async function fetchChartData(sym, rangeKey) {
+  var cacheKey = sym + "_" + rangeKey;
+  if (chartDataCache[cacheKey]) return chartDataCache[cacheKey];
+  var cfg = RANGES[rangeKey];
+  var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + sym + "?interval=" + cfg.interval + "&range=" + cfg.range;
+  var proxy = "https://api.allorigins.win/get?url=" + encodeURIComponent(url);
+  var res = await fetch(proxy);
+  var wrapper = await res.json();
+  var data = JSON.parse(wrapper.contents);
+  var result = data.chart.result[0];
+  var timestamps = result.timestamp;
+  var q = result.indicators.quote[0];
+  var closes = q.close, volumes = q.volume || [];
+  var labels = [], prices = [], vols = [];
+  for (var i = 0; i < timestamps.length; i++) {
+    if (closes[i] == null) continue;
+    var date = new Date(timestamps[i] * 1000);
+    var label = rangeKey === "1W"
+      ? date.toLocaleDateString("en-US", {weekday:"short", month:"short", day:"numeric"})
+      : rangeKey === "1Y" || rangeKey === "6M"
+        ? date.toLocaleDateString("en-US", {month:"short", day:"numeric"})
+        : date.toLocaleDateString("en-US", {month:"short", day:"numeric"});
+    labels.push(label);
+    prices.push(parseFloat(closes[i].toFixed(2)));
+    vols.push(volumes[i] || 0);
+  }
+  var result2 = { labels: labels, prices: prices, vols: vols };
+  chartDataCache[cacheKey] = result2;
+  return result2;
+}
+
+async function fetchSparkline(sym) {
+  if (sparkCache[sym]) return sparkCache[sym];
+  var url = "https://query1.finance.yahoo.com/v8/finance/chart/" + sym + "?interval=1d&range=14d";
+  var proxy = "https://api.allorigins.win/get?url=" + encodeURIComponent(url);
+  var res = await fetch(proxy);
+  var wrapper = await res.json();
+  var data = JSON.parse(wrapper.contents);
+  var closes = data.chart.result[0].indicators.quote[0].close;
+  var prices = closes.filter(function(v) { return v != null; });
+  if (prices.length < 2) throw new Error("not enough data");
+  sparkCache[sym] = prices;
+  return prices;
+}
+
+function sparklineSVG(prices, up) {
+  var W = 80, H = 32, pad = 4;
+  var min = Math.min.apply(null, prices), max = Math.max.apply(null, prices);
+  var range = max - min || 0.01;
+  var pts = prices.map(function(p, i) {
+    var x = pad + (i / (prices.length-1)) * (W - pad*2);
+    var y = H - pad - ((p-min)/range) * (H - pad*2);
+    return x.toFixed(1) + "," + y.toFixed(1);
+  }).join(" ");
+  var color = up ? "#00ff88" : "#ff4757";
+  return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" style="display:block"><polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>';
+}
+
 async function fetchSuggestions(q) {
-  const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0&enableFuzzyQuery=true`;
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  const res = await fetch(proxy);
-  const wrapper = await res.json();
-  const data = JSON.parse(wrapper.contents);
-  return (data.quotes || []).filter(r => r.quoteType === "EQUITY" || r.quoteType === "ETF").slice(0, 8);
+  var url = "https://query1.finance.yahoo.com/v1/finance/search?q=" + encodeURIComponent(q) + "&quotesCount=8&newsCount=0&enableFuzzyQuery=true";
+  var proxy = "https://api.allorigins.win/get?url=" + encodeURIComponent(url);
+  var res = await fetch(proxy);
+  var wrapper = await res.json();
+  var data = JSON.parse(wrapper.contents);
+  return (data.quotes || []).filter(function(r) { return r.quoteType==="EQUITY"||r.quoteType==="ETF"; }).slice(0,8);
 }
 
-// ─── SIMULATED AI ANALYSIS ────────────────────────────────────────────────────
-const AI_TEMPLATES = [
-  k=>`${k} momentum is building as institutional money rotates into this space, with options flow signalling a near-term breakout above key resistance. Smart money positioning in derivatives points to continued upside, with risk/reward skewed heavily in favour of longs at current valuations. Watch for volume confirmation on any move above the 50-day moving average as the catalyst trigger.`,
-  k=>`The macro backdrop is increasingly favourable for ${k} plays, as rate expectations shift and sector rotation accelerates. Relative strength vs the S&P 500 has been exceptional over the past 30 days, significantly outperforming the index. The technical setup is constructive — higher lows, expanding volume on up days — signalling sustained buying pressure from both retail and institutional participants.`,
-  k=>`${k} is at an inflection point where fundamental tailwinds are finally being reflected in price action, with analysts rapidly revising estimates upward. The margin expansion story remains intact, and recent guidance sets a higher floor for the next 12 months. With a forward P/E well below sector peers and strong free cash flow yield, the risk-adjusted return profile here is among the most compelling in the market.`,
+var AI_TEMPLATES = [
+  function(k){return k+" momentum is building as institutional money rotates into this space, with options flow signalling a near-term breakout above key resistance. Smart money positioning in derivatives points to continued upside, with risk/reward skewed heavily in favour of longs at current valuations.";},
+  function(k){return "The macro backdrop is increasingly favourable for "+k+" plays, as rate expectations shift and sector rotation accelerates. Relative strength vs the S&P 500 has been exceptional over the past 30 days, significantly outperforming the index.";},
+  function(k){return k+" is at an inflection point where fundamental tailwinds are finally being reflected in price action, with analysts rapidly revising estimates upward. With a forward P/E well below sector peers and strong free cash flow yield, the risk-adjusted return profile here is among the most compelling in the market.";}
 ];
+
 async function getAI(prompt) {
-  await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
-  const kw = prompt.split(' ').filter(w => w.length > 4).slice(0, 3).join(', ') || "this sector";
-  return AI_TEMPLATES[Math.floor(Math.random() * AI_TEMPLATES.length)](kw);
+  await new Promise(function(r){setTimeout(r,800+Math.random()*600);});
+  var kw = prompt.split(" ").filter(function(w){return w.length>4;}).slice(0,3).join(", ")||"this sector";
+  return AI_TEMPLATES[Math.floor(Math.random()*AI_TEMPLATES.length)](kw);
 }
 
-// ─── SETUP SCREEN ─────────────────────────────────────────────────────────────
+// ── SETUP ──────────────────────────────────────────────────────────────────────
 function buildSetup() {
-  const g = document.getElementById('sectGrid');
-  g.innerHTML = '';
-  Object.entries(SECTORS).forEach(([key, val]) => {
-    const d = document.createElement('div');
-    d.className = 'sect-btn' + (interests.has(key) ? ' on' : '');
-    d.onclick = () => toggleSect(key, d);
-    d.innerHTML = `<div style="font-size:2em;margin-bottom:8px">${val.icon}</div><div style="font-weight:600;font-size:.93em">${key.charAt(0).toUpperCase()+key.slice(1)}</div>`;
+  var g = document.getElementById("sectGrid");
+  g.innerHTML = "";
+  Object.keys(SECTORS).forEach(function(key) {
+    var val = SECTORS[key];
+    var d = document.createElement("div");
+    d.className = "sect-btn" + (interests.has(key) ? " on" : "");
+    d.onclick = function() { toggleSect(key, d); };
+    d.innerHTML = '<div style="font-size:2em;margin-bottom:8px">'+val.icon+'</div><div style="font-weight:600;font-size:.93em">'+key.charAt(0).toUpperCase()+key.slice(1)+'</div>';
     g.appendChild(d);
   });
   updateStartBtn();
 }
 
 function toggleSect(key, el) {
-  interests.has(key) ? interests.delete(key) : interests.add(key);
-  el.classList.toggle('on', interests.has(key));
+  if (interests.has(key)) { interests.delete(key); } else { interests.add(key); }
+  el.classList.toggle("on", interests.has(key));
   updateStartBtn();
 }
 
 function updateStartBtn() {
-  const b = document.getElementById('startBtn');
-  const on = interests.size > 0;
+  var b = document.getElementById("startBtn");
+  var on = interests.size > 0;
   b.disabled = !on;
-  b.style.background = on ? '#00ff88' : '#2d3561';
-  b.style.color = on ? '#0a0e27' : '#4a5568';
-  b.style.cursor = on ? 'pointer' : 'not-allowed';
+  b.style.background = on ? "#00ff88" : "#2d3561";
+  b.style.color = on ? "#0a0e27" : "#4a5568";
+  b.style.cursor = on ? "pointer" : "not-allowed";
 }
 
 function startApp() {
-  document.getElementById('setupScreen').style.display = 'none';
-  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById("setupScreen").style.display = "none";
+  document.getElementById("appScreen").style.display = "block";
   buildApp();
 }
 
 function goSetup() {
   clearAllTicks();
-  document.getElementById('appScreen').style.display = 'none';
-  document.getElementById('setupScreen').style.display = 'flex';
+  document.getElementById("appScreen").style.display = "none";
+  document.getElementById("setupScreen").style.display = "flex";
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+// ── APP ────────────────────────────────────────────────────────────────────────
 function buildApp() {
   clearAllTicks();
-  // Header chips
-  document.getElementById('hChips').innerHTML =
-    [...interests].map(i => `<div class="chip">${SECTORS[i].icon} ${i}</div>`).join('');
-  // Portfolio — fetch real data for sector tickers
-  const tickers = [...new Set([...interests].flatMap(i => SECTORS[i].tickers))].slice(0, 10);
-  const portEl = document.getElementById('portItems');
-  portEl.innerHTML = `<div class="empty"><span class="spin"></span> Loading live prices…</div>`;
-  Promise.all(tickers.map(t => fetchQuote(t).catch(() => null))).then(results => {
-    const valid = results.filter(Boolean);
-    if (!valid.length) { portEl.innerHTML = `<div class="err">Could not load prices. Check your connection.</div>`; return; }
-    portEl.innerHTML = tickers.map(sym => stockCache[sym] ? stockRowHTML(sym, 'port') : '').join('');
-    tickers.forEach(sym => { if (stockCache[sym]) startTick(sym, 'port'); });
+  var chips = "";
+  interests.forEach(function(i){chips+='<div class="chip">'+SECTORS[i].icon+" "+i+"</div>";});
+  document.getElementById("hChips").innerHTML = chips;
+  var tickerSet = new Set();
+  interests.forEach(function(i){SECTORS[i].tickers.forEach(function(t){tickerSet.add(t);});});
+  var tickers = Array.from(tickerSet).slice(0,10);
+  var portEl = document.getElementById("portItems");
+  portEl.innerHTML = '<div class="empty"><span class="spin"></span> Loading live prices...</div>';
+  Promise.all(tickers.map(function(t){return fetchQuote(t).catch(function(){return null;});})).then(function(results){
+    if (!results.filter(Boolean).length){portEl.innerHTML='<div class="err">Could not load prices.</div>';return;}
+    var html="";
+    tickers.forEach(function(sym){if(stockCache[sym])html+=stockRowHTML(sym,"port");});
+    portEl.innerHTML=html;
+    tickers.forEach(function(sym){if(stockCache[sym])startTick(sym,"port");});
   });
-  // Trends + News filtered by interest
-  const shownTrends = TRENDS.filter(t => t.sectors.some(s => interests.has(s)));
-  document.getElementById('trendCont').innerHTML = shownTrends.length
-    ? shownTrends.map(trendHTML).join('')
-    : `<div class="empty">No trends for selected sectors</div>`;
-  const shownNews = NEWS.filter(n => n.sectors.some(s => interests.has(s)));
-  document.getElementById('newsCont').innerHTML = shownNews.length
-    ? shownNews.map(newsHTML).join('')
-    : `<div class="empty">No news for selected sectors</div>`;
+  var shownTrends = TRENDS.filter(function(t){return t.sectors.some(function(s){return interests.has(s);});});
+  document.getElementById("trendCont").innerHTML = shownTrends.length ? shownTrends.map(trendHTML).join("") : '<div class="empty">No trends for selected sectors</div>';
+  var shownNews = NEWS.filter(function(n){return n.sectors.some(function(s){return interests.has(s);});});
+  document.getElementById("newsCont").innerHTML = shownNews.length ? shownNews.map(newsHTML).join("") : '<div class="empty">No news for selected sectors</div>';
 }
 
-// ─── STOCK ROW ────────────────────────────────────────────────────────────────
-function fmt(n) { return n == null ? '—' : n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}); }
-
+// ── STOCK ROW ──────────────────────────────────────────────────────────────────
 function stockRowHTML(sym, cid) {
-  const d = stockCache[sym];
-  if (!d) return '';
-  const up = d.change >= 0;
-  const inWL = watchlist.includes(sym);
-  return `
-    <div id="row_${sym}_${cid}" class="srow" onclick="openModal('${sym}')">
-      <button onclick="event.stopPropagation();toggleWL('${sym}')" id="star_${sym}_${cid}"
-        style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;font-size:1.5em;cursor:pointer;color:${inWL?'#ffd93d':'#3a4060'};transition:all .2s">
-        ${inWL ? '★' : '☆'}
-      </button>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:1.05em;font-family:monospace">${sym}</div>
-        <div style="color:#9ba3af;font-size:.82em;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${d.name}</div>
-      </div>
-      <div id="price_${sym}_${cid}" style="text-align:right;flex-shrink:0">
-        <div style="font-weight:700;font-size:1.1em;font-family:monospace">$${fmt(d.price)}</div>
-        <div style="font-size:.84em;font-weight:600;margin-top:2px;color:${up?'#00ff88':'#ff4757'}">
-          ${up?'▲':'▼'} ${fmt(Math.abs(d.change))} (${Math.abs(d.pct).toFixed(2)}%)
-        </div>
-      </div>
-    </div>`;
+  var d = stockCache[sym]; if(!d) return "";
+  var up = d.change >= 0, inWL = watchlist.indexOf(sym)!==-1;
+  var sparkId = "spark_"+sym+"_"+cid;
+  setTimeout(function(){
+    fetchSparkline(sym).then(function(prices){
+      var el=document.getElementById(sparkId);
+      if(el) el.innerHTML=sparklineSVG(prices,up);
+    }).catch(function(){});
+  }, 150);
+  return '<div id="row_'+sym+'_'+cid+'" class="srow" onclick="openModal(\''+sym+'\')">'
+    +'<button onclick="event.stopPropagation();toggleWL(\''+sym+'\')" id="star_'+sym+'_'+cid+'" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;font-size:1.5em;cursor:pointer;color:'+(inWL?"#ffd93d":"#3a4060")+';transition:all .2s">'+(inWL?"★":"☆")+'</button>'
+    +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:1.05em;font-family:monospace">'+sym+'</div><div style="color:#9ba3af;font-size:.82em;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">'+d.name+'</div></div>'
+    +'<div id="'+sparkId+'" style="display:flex;align-items:center;margin:0 10px;flex-shrink:0;min-width:80px;min-height:32px"></div>'
+    +'<div id="price_'+sym+'_'+cid+'" style="text-align:right;flex-shrink:0"><div style="font-weight:700;font-size:1.1em;font-family:monospace">$'+fmt(d.price)+'</div><div style="font-size:.84em;font-weight:600;margin-top:2px;color:'+(up?"#00ff88":"#ff4757")+'">'+(up?"▲":"▼")+" "+fmt(Math.abs(d.change))+" ("+Math.abs(d.pct).toFixed(2)+"%)</div></div>"
+    +'</div>';
 }
 
-function updatePriceEl(sym, cid) {
-  const el = document.getElementById(`price_${sym}_${cid}`);
-  const row = document.getElementById(`row_${sym}_${cid}`);
-  if (!el) return;
-  const d = stockCache[sym];
-  const up = d.change >= 0;
-  el.innerHTML = `
-    <div style="font-weight:700;font-size:1.1em;font-family:monospace">$${fmt(d.price)}</div>
-    <div style="font-size:.84em;font-weight:600;margin-top:2px;color:${up?'#00ff88':'#ff4757'}">
-      ${up?'▲':'▼'} ${fmt(Math.abs(d.change))} (${Math.abs(d.pct).toFixed(2)}%)
-    </div>`;
-  if (row) {
-    row.style.borderColor = '#00ff88';
-    setTimeout(() => { if(row) row.style.borderColor = '#2d3561'; }, 600);
-  }
+function updatePriceEl(sym,cid){
+  var el=document.getElementById("price_"+sym+"_"+cid);
+  var row=document.getElementById("row_"+sym+"_"+cid);
+  if(!el) return;
+  var d=stockCache[sym], up=d.change>=0;
+  el.innerHTML='<div style="font-weight:700;font-size:1.1em;font-family:monospace">$'+fmt(d.price)+'</div><div style="font-size:.84em;font-weight:600;margin-top:2px;color:'+(up?"#00ff88":"#ff4757")+'">'+(up?"▲":"▼")+" "+fmt(Math.abs(d.change))+" ("+Math.abs(d.pct).toFixed(2)+"%)</div>";
+  if(row){row.style.borderColor="#00ff88";setTimeout(function(){if(row)row.style.borderColor="#2d3561";},600);}
 }
 
-// ─── LIVE TICK (re-fetches real data every 30s) ────────────────────────────────
-function startTick(sym, cid) {
-  if (tickerIntervals[`${sym}_${cid}`]) return;
-  const id = setInterval(async () => {
-    try {
-      delete stockCache[sym]; // force re-fetch
-      await fetchQuote(sym);
-      updatePriceEl(sym, cid);
-    } catch(e) {}
-  }, 30000);
-  tickerIntervals[`${sym}_${cid}`] = id;
+function startTick(sym,cid){
+  var key=sym+"_"+cid; if(tickerIntervals[key]) return;
+  tickerIntervals[key]=setInterval(function(){
+    delete stockCache[sym];
+    fetchQuote(sym).then(function(){updatePriceEl(sym,cid);}).catch(function(){});
+  },30000);
 }
 
-function clearAllTicks() {
-  Object.values(tickerIntervals).forEach(clearInterval);
-  tickerIntervals = {};
+function clearAllTicks(){
+  Object.keys(tickerIntervals).forEach(function(k){clearInterval(tickerIntervals[k]);});
+  tickerIntervals={};
 }
 
-// ─── SEARCH ───────────────────────────────────────────────────────────────────
-let suggestTimeout;
-async function onType() {
-  const q = document.getElementById('sInput').value.trim();
-  const dd = document.getElementById('sDrop');
+// ── SEARCH ─────────────────────────────────────────────────────────────────────
+var suggestTimeout;
+function onType(){
+  var q=document.getElementById("sInput").value.trim();
+  var dd=document.getElementById("sDrop");
   clearTimeout(suggestTimeout);
-  if (q.length < 1) { dd.style.display='none'; return; }
-  suggestTimeout = setTimeout(async () => {
-    try {
-      const results = await fetchSuggestions(q);
-      if (!results.length) { dd.style.display='none'; return; }
-      dd.innerHTML = results.map(r => `
-        <div class="sug" onmousedown="pickSug('${r.symbol}')">
-          <span><strong style="font-family:monospace">${r.symbol}</strong>
-            <span style="color:#9ba3af;font-size:.88em;margin-left:8px">${r.longname || r.shortname || ''}</span>
-          </span>
-          <span style="color:#9ba3af;font-size:.8em">${r.exchDisp || ''}</span>
-        </div>`).join('');
-      dd.style.display = 'block';
-    } catch(e) { dd.style.display='none'; }
-  }, 300);
+  if(q.length<1){dd.style.display="none";return;}
+  suggestTimeout=setTimeout(function(){
+    fetchSuggestions(q).then(function(results){
+      if(!results.length){dd.style.display="none";return;}
+      dd.innerHTML=results.map(function(r){
+        return '<div class="sug" onmousedown="pickSug(\''+r.symbol+'\')">'
+          +'<span><strong style="font-family:monospace">'+r.symbol+'</strong><span style="color:#9ba3af;font-size:.88em;margin-left:8px">'+(r.longname||r.shortname||"")+'</span></span>'
+          +'<span style="color:#9ba3af;font-size:.8em">'+(r.exchDisp||"")+'</span></div>';
+      }).join("");
+      dd.style.display="block";
+    }).catch(function(){dd.style.display="none";});
+  },300);
 }
 
-function closeDrop() { document.getElementById('sDrop').style.display = 'none'; }
+function closeDrop(){document.getElementById("sDrop").style.display="none";}
+function pickSug(sym){document.getElementById("sInput").value=sym;closeDrop();doSearch();}
 
-function pickSug(sym) {
-  document.getElementById('sInput').value = sym;
+function doSearch(){
+  var q=document.getElementById("sInput").value.trim().toUpperCase();
+  var el=document.getElementById("sResults");
+  if(!q){el.innerHTML="";return;}
   closeDrop();
-  doSearch();
-}
-
-async function doSearch() {
-  const q = document.getElementById('sInput').value.trim().toUpperCase();
-  const el = document.getElementById('sResults');
-  if (!q) { el.innerHTML=''; return; }
-  closeDrop();
-  el.innerHTML = `<div style="margin-top:12px;display:flex;align-items:center;gap:10px;color:#9ba3af"><span class="spin"></span> Fetching live data for <strong style="color:#00ff88">${q}</strong>…</div>`;
-  try {
-    await fetchQuote(q);
-    const cid = 'sr' + Date.now();
-    el.innerHTML = `<div style="margin-top:14px">${stockRowHTML(q, cid)}</div>`;
-    startTick(q, cid);
-  } catch(e) {
-    el.innerHTML = `<div class="err" style="margin-top:10px">&#10060; Could not find "<strong>${q}</strong>". Make sure it's a valid ticker (e.g. AAPL, TSLA, AMZN).</div>`;
-  }
-}
-
-// ─── WATCHLIST ────────────────────────────────────────────────────────────────
-function toggleWL(sym) {
-  watchlist = watchlist.includes(sym) ? watchlist.filter(s=>s!==sym) : [...watchlist, sym];
-  document.querySelectorAll(`[id^="star_${sym}_"]`).forEach(b => {
-    const on = watchlist.includes(sym);
-    b.textContent = on ? '★' : '☆';
-    b.style.color = on ? '#ffd93d' : '#3a4060';
+  el.innerHTML='<div style="margin-top:12px;display:flex;align-items:center;gap:10px;color:#9ba3af"><span class="spin"></span> Fetching <strong style="color:#00ff88">'+q+'</strong>...</div>';
+  fetchQuote(q).then(function(){
+    var cid="sr"+Date.now();
+    el.innerHTML='<div style="margin-top:14px">'+stockRowHTML(q,cid)+'</div>';
+    startTick(q,cid);
+  }).catch(function(){
+    el.innerHTML='<div class="err" style="margin-top:10px">&#10060; Could not find <strong>'+q+'</strong>.</div>';
   });
-  const badge = document.getElementById('wlBadge');
-  badge.innerHTML = watchlist.length
-    ? `<span style="background:#ffd93d;color:#0a0e27;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:.72em;font-weight:700;margin-left:4px">${watchlist.length}</span>`
-    : '';
+}
+
+// ── WATCHLIST ──────────────────────────────────────────────────────────────────
+function toggleWL(sym){
+  var idx=watchlist.indexOf(sym);
+  if(idx!==-1){watchlist.splice(idx,1);}else{watchlist.push(sym);}
+  var on=watchlist.indexOf(sym)!==-1;
+  document.querySelectorAll('[id^="star_'+sym+'_"]').forEach(function(b){b.textContent=on?"★":"☆";b.style.color=on?"#ffd93d":"#3a4060";});
+  var badge=document.getElementById("wlBadge");
+  badge.innerHTML=watchlist.length?'<span style="background:#ffd93d;color:#0a0e27;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:.72em;font-weight:700;margin-left:4px">'+watchlist.length+'</span>':"";
   renderWL();
 }
 
-function toggleWLPanel() {
-  const p = document.getElementById('wlPanel');
-  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+function toggleWLPanel(){var p=document.getElementById("wlPanel");p.style.display=p.style.display==="none"?"block":"none";}
+
+function renderWL(){
+  var el=document.getElementById("wlItems");
+  if(!watchlist.length){el.innerHTML='<div class="empty">Star stocks with &#9734; to add them here</div>';return;}
+  el.innerHTML=watchlist.map(function(sym){return stockCache[sym]?stockRowHTML(sym,"wl"):"";}).join("");
+  watchlist.forEach(function(sym){if(stockCache[sym])startTick(sym,"wl");});
 }
 
-function renderWL() {
-  const el = document.getElementById('wlItems');
-  if (!watchlist.length) { el.innerHTML = `<div class="empty">Star stocks with &#9734; to add them here</div>`; return; }
-  el.innerHTML = watchlist.map(sym => stockCache[sym] ? stockRowHTML(sym,'wl') : '').join('');
-  watchlist.forEach(sym => { if(stockCache[sym]) startTick(sym,'wl'); });
+// ── NEWS / TRENDS ──────────────────────────────────────────────────────────────
+function newsHTML(item){
+  var key="news_"+item.id;
+  return '<div class="news-card">'
+    +'<div style="font-weight:600;font-size:.97em;line-height:1.4;margin-bottom:8px">'+item.title+'</div>'
+    +'<div style="display:flex;gap:10px;color:#9ba3af;font-size:.79em;flex-wrap:wrap;margin-bottom:8px;align-items:center"><span style="color:#00ff88;font-weight:600">'+item.source+'</span><span>'+item.time+'</span><span style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);padding:1px 8px;border-radius:10px">'+item.cat+'</span></div>'
+    +'<div style="color:#9ba3af;line-height:1.55;font-size:.86em">'+item.summary+'</div>'
+    +(aiCache[key]?aiPanelHTML(aiCache[key]):'<button class="ai-btn" id="aib_'+key+'" onclick="runAI(\''+key+'\',\''+encodeURIComponent(item.prompt)+'\',\'aib_'+key+'\',\'aip_'+key+'\')">&#10022; AI Analysis</button><div id="aip_'+key+'"></div>')
+    +'</div>';
 }
 
-// ─── NEWS / TREND CARDS ───────────────────────────────────────────────────────
-function newsHTML(item) {
-  const key = 'news_' + item.id;
-  return `
-    <div class="news-card">
-      <div style="font-weight:600;font-size:.97em;line-height:1.4;margin-bottom:8px">${item.title}</div>
-      <div style="display:flex;gap:10px;color:#9ba3af;font-size:.79em;flex-wrap:wrap;margin-bottom:8px;align-items:center">
-        <span style="color:#00ff88;font-weight:600">${item.source}</span>
-        <span>${item.time}</span>
-        <span style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);padding:1px 8px;border-radius:10px">${item.cat}</span>
-      </div>
-      <div style="color:#9ba3af;line-height:1.55;font-size:.86em">${item.summary}</div>
-      ${aiCache[key]
-        ? aiPanelHTML(aiCache[key])
-        : `<button class="ai-btn" id="aib_${key}" onclick="runAI('${key}','${encodeURIComponent(item.prompt)}','aib_${key}','aip_${key}')">&#10022; AI Analysis</button>
-           <div id="aip_${key}"></div>`}
-    </div>`;
+function trendHTML(item){
+  var key="trend_"+item.id;
+  return '<div class="trend-card">'
+    +'<div style="font-weight:700;color:#3498db;font-size:.97em;margin-bottom:5px">'+item.title+'</div>'
+    +'<div style="color:#9ba3af;font-size:.86em;line-height:1.5">'+item.desc+'</div>'
+    +(aiCache[key]?aiPanelHTML(aiCache[key]):'<button class="ai-btn" id="aib_'+key+'" onclick="runAI(\''+key+'\',\''+encodeURIComponent(item.prompt)+'\',\'aib_'+key+'\',\'aip_'+key+'\')">&#10022; AI Deep-Dive</button><div id="aip_'+key+'"></div>')
+    +'</div>';
 }
 
-function trendHTML(item) {
-  const key = 'trend_' + item.id;
-  return `
-    <div class="trend-card">
-      <div style="font-weight:700;color:#3498db;font-size:.97em;margin-bottom:5px">${item.title}</div>
-      <div style="color:#9ba3af;font-size:.86em;line-height:1.5">${item.desc}</div>
-      ${aiCache[key]
-        ? aiPanelHTML(aiCache[key])
-        : `<button class="ai-btn" id="aib_${key}" onclick="runAI('${key}','${encodeURIComponent(item.prompt)}','aib_${key}','aip_${key}')">&#10022; AI Deep-Dive</button>
-           <div id="aip_${key}"></div>`}
-    </div>`;
+function aiPanelHTML(text){
+  return '<div class="ai-panel"><div style="color:#3498db;font-size:.72em;font-weight:700;font-family:monospace;letter-spacing:1px;margin-bottom:7px">&#10022; AI ANALYSIS</div><div style="color:#c8d8f0;line-height:1.65;font-size:.86em">'+text+'</div></div>';
 }
 
-function aiPanelHTML(text) {
-  return `<div class="ai-panel">
-    <div style="color:#3498db;font-size:.72em;font-weight:700;font-family:monospace;letter-spacing:1px;margin-bottom:7px">&#10022; AI ANALYSIS</div>
-    <div style="color:#c8d8f0;line-height:1.65;font-size:.86em">${text}</div>
-  </div>`;
+function runAI(key,encodedPrompt,btnId,panelId){
+  var btn=document.getElementById(btnId), panel=document.getElementById(panelId);
+  if(!btn||!panel) return;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Analyzing...';
+  getAI(decodeURIComponent(encodedPrompt)).then(function(text){
+    aiCache[key]=text; btn.style.display="none"; panel.innerHTML=aiPanelHTML(text);
+  }).catch(function(){btn.disabled=false;btn.innerHTML="&#10022; AI Analysis";panel.innerHTML='<div class="err">Analysis failed.</div>';});
 }
 
-async function runAI(key, encodedPrompt, btnId, panelId) {
-  const btn = document.getElementById(btnId);
-  const panel = document.getElementById(panelId);
-  if (!btn || !panel) return;
-  btn.disabled = true;
-  btn.innerHTML = `<span class="spin"></span> Analyzing…`;
-  try {
-    const text = await getAI(decodeURIComponent(encodedPrompt));
-    aiCache[key] = text;
-    btn.style.display = 'none';
-    panel.innerHTML = aiPanelHTML(text);
-  } catch(e) {
-    btn.disabled = false;
-    btn.innerHTML = '&#10022; AI Analysis';
-    panel.innerHTML = `<div class="err">Analysis failed — please try again.</div>`;
-  }
-}
-
-// ─── MODAL ────────────────────────────────────────────────────────────────────
+// ── MODAL + YAHOO-STYLE CHART ──────────────────────────────────────────────────
 function openModal(sym) {
-  const d = stockCache[sym];
-  if (!d) return;
-  const up = d.change >= 0;
-  document.getElementById('modalBody').innerHTML = `
-    <div style="font-family:monospace;font-size:1.15em;color:#00ff88;margin-bottom:18px;padding-right:44px">${sym} — ${d.name}</div>
-    <div style="padding:20px;background:#151b3d;border-radius:12px;margin-bottom:14px">
-      <div style="font-size:2.2em;font-weight:700;color:#00ff88;font-family:monospace;margin-bottom:6px">$${fmt(d.price)}</div>
-      <div style="font-size:1.1em;color:${up?'#00ff88':'#ff4757'};margin-bottom:16px">
-        ${up?'▲':'▼'} $${fmt(Math.abs(d.change))} (${Math.abs(d.pct).toFixed(2)}%) today
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:14px;border-top:1px solid #2d3561">
-        ${[['Sector',d.sector],['Currency',d.currency],['Day High','$'+fmt(d.price*(1+0.012))],['Day Low','$'+fmt(d.price*(1-0.012))]].map(([l,v])=>`
-          <div>
-            <div style="color:#9ba3af;font-size:.76em;margin-bottom:3px">${l}</div>
-            <div style="font-weight:600;font-size:.93em">${v}</div>
-          </div>`).join('')}
-      </div>
-    </div>
-    <div style="color:#9ba3af;font-size:.77em;text-align:center">Live data via Yahoo Finance &bull; Updates every 30s</div>`;
-  document.getElementById('modalBg').style.display = 'flex';
+  var d = stockCache[sym]; if (!d) return;
+  var up = d.change >= 0;
+  var color = up ? "#00ff88" : "#ff4757";
+  activeChartSym = sym;
+  activeRange = "1M";
+  if (activeChart) { activeChart.destroy(); activeChart = null; }
+
+  var statsHTML = "";
+  [["Sector",d.sector],["Currency",d.currency],["Volume",fmtVol(d.volume)],["Mkt Cap",d.mktCap?fmtVol(d.mktCap):"—"]].forEach(function(p){
+    statsHTML+='<div><div style="color:#9ba3af;font-size:.76em;margin-bottom:3px">'+p[0]+'</div><div style="font-weight:600;font-size:.93em">'+p[1]+'</div></div>';
+  });
+
+  var rangeButtons = ["1W","1M","3M","6M","1Y"].map(function(r){
+    return '<button class="range-btn'+(r==="1M"?" active":"")+'" id="rbtn_'+r+'" onclick="switchRange(\''+r+'\')">'+r+'</button>';
+  }).join("");
+
+  document.getElementById("modalBody").innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px;padding-right:44px">'
+    +'<div><div style="font-family:monospace;font-size:1.1em;color:#e8eaed;font-weight:700">'+sym+'<span style="color:#9ba3af;font-weight:400;font-size:.85em;margin-left:8px">'+d.name+'</span></div>'
+    +'<div style="display:flex;align-items:baseline;gap:10px;margin-top:4px">'
+    +'<span style="font-size:2em;font-weight:700;color:#e8eaed;font-family:monospace">$'+fmt(d.price)+'</span>'
+    +'<span style="font-size:1em;color:'+color+';font-weight:600">'+(up?"▲":"▼")+' $'+fmt(Math.abs(d.change))+' ('+Math.abs(d.pct).toFixed(2)+'%)</span>'
+    +'</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-top:4px">'+statsHTML+'</div>'
+    +'</div>'
+
+    // Chart
+    +'<div style="background:#0d1126;border:1px solid #2d3561;border-radius:12px;padding:14px;margin-bottom:14px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+    +'<div id="chartHoverInfo" style="font-family:monospace;font-size:.82em;color:#9ba3af;min-height:18px"></div>'
+    +'<div style="display:flex;gap:6px">'+rangeButtons+'</div>'
+    +'</div>'
+    +'<div style="position:relative">'
+    +'<div id="chartWrap" style="position:relative;height:220px;display:flex;align-items:center;justify-content:center"><span class="spin"></span></div>'
+    +'</div>'
+    +'<div id="volWrap" style="height:48px;margin-top:4px"></div>'
+    +'</div>'
+    +'<div style="color:#9ba3af;font-size:.77em;text-align:center">Data via Yahoo Finance &bull; Auto-updates every 30s</div>';
+
+  document.getElementById("modalBg").style.display = "flex";
+  loadChart(sym, "1M");
 }
 
-function closeModal() { document.getElementById('modalBg').style.display = 'none'; }
+function switchRange(rangeKey) {
+  if (!activeChartSym) return;
+  activeRange = rangeKey;
+  ["1W","1M","3M","6M","1Y"].forEach(function(r){
+    var b = document.getElementById("rbtn_"+r);
+    if (b) { b.className = "range-btn" + (r===rangeKey?" active":""); }
+  });
+  var wrap = document.getElementById("chartWrap");
+  var vwrap = document.getElementById("volWrap");
+  if (wrap) wrap.innerHTML = '<span class="spin"></span>';
+  if (vwrap) vwrap.innerHTML = "";
+  if (activeChart) { activeChart.destroy(); activeChart = null; }
+  loadChart(activeChartSym, rangeKey);
+}
 
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-buildSetup();
+function loadChart(sym, rangeKey) {
+  var d = stockCache[sym];
+  var up = d ? d.change >= 0 : true;
+  var lineColor = up ? "#00ff88" : "#ff4757";
+
+  fetchChartData(sym, rangeKey).then(function(cd) {
+    var wrap = document.getElementById("chartWrap");
+    var vwrap = document.getElementById("volWrap");
+    if (!wrap) return;
+
+    // Main price chart
+    wrap.innerHTML = '<canvas id="priceChart" style="width:100%;height:220px"></canvas>';
+    var canvas = document.getElementById("priceChart");
+    var ctx = canvas.getContext("2d");
+    var grad = ctx.createLinearGradient(0, 0, 0, 220);
+    grad.addColorStop(0, up ? "rgba(0,255,136,0.18)" : "rgba(255,71,87,0.18)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+
+    activeChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: cd.labels,
+        datasets: [{
+          data: cd.prices,
+          borderColor: lineColor,
+          borderWidth: 2,
+          backgroundColor: grad,
+          fill: true,
+          tension: 0.25,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: lineColor,
+          pointHoverBorderColor: "#0d1126",
+          pointHoverBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: "index" },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: false,
+            external: function(context) {
+              var infoEl = document.getElementById("chartHoverInfo");
+              if (!infoEl) return;
+              if (context.tooltip.opacity === 0) {
+                infoEl.innerHTML = "";
+                return;
+              }
+              var dp = context.tooltip.dataPoints[0];
+              if (!dp) return;
+              var price = dp.parsed.y;
+              var label = dp.label;
+              var vol = cd.vols[dp.dataIndex];
+              infoEl.innerHTML =
+                '<span style="color:#e8eaed;font-weight:700">$'+fmt(price)+'</span>'
+                +'<span style="color:#9ba3af;margin-left:10px">'+label+'</span>'
+                +(vol?'<span style="color:#9ba3af;margin-left:10px">Vol: '+fmtVol(vol)+'</span>':"");
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: "rgba(45,53,97,0.4)", drawTicks: false },
+            ticks: { color: "#6b7280", font: { size: 10 }, maxTicksLimit: 7, maxRotation: 0 },
+            border: { color: "rgba(45,53,97,0.6)" }
+          },
+          y: {
+            position: "right",
+            grid: { color: "rgba(45,53,97,0.4)", drawTicks: false },
+            ticks: {
+              color: "#6b7280", font: { size: 10, family: "monospace" },
+              callback: function(v) { return "$"+fmt(v); },
+              maxTicksLimit: 6
+            },
+            border: { color: "rgba(45,53,97,0.6)" }
+          }
+        }
+      }
+    });
+
+    // Volume bar chart
+    if (vwrap && cd.vols.length) {
+      vwrap.innerHTML = '<canvas id="volChart" style="width:100%;height:48px"></canvas>';
+      var vcanvas = document.getElementById("volChart");
+      var vctx = vcanvas.getContext("2d");
+      new Chart(vctx, {
+        type: "bar",
+        data: {
+          labels: cd.labels,
+          datasets: [{
+            data: cd.vols,
+            backgroundColor: up ? "rgba(0,255,136,0.25)" : "rgba(255,71,87,0.25)",
+            borderColor: up ? "rgba(0,255,136,0.5)" : "rgba(255,71,87,0.5)",
+            borderWidth: 1,
+            borderRadius: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: false } },
+          scales: {
+            x: { display: false },
+            y: { display: false }
+          }
+        }
+      });
+    }
+
+  }).catch(function() {
+    var wrap = document.getElementById("chartWrap");
+    if (wrap) wrap.innerHTML = '<div style="color:#9ba3af;font-size:.85em">Chart unavailable</div>';
+  });
+}
+
+function closeModal() {
+  if (activeChart) { activeChart.destroy(); activeChart = null; }
+  activeChartSym = null;
+  document.getElementById("modalBg").style.display = "none";
+}
+
+document.addEventListener("DOMContentLoaded", function() { buildSetup(); });
 </script>
 </body>
 </html>
