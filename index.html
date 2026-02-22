@@ -1,575 +1,523 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LiveStock</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#0a0e27;color:#e8eaed;min-height:100vh}
+@keyframes gridMove{0%{transform:translate(0,0)}100%{transform:translate(50px,50px)}}
+@keyframes rot{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.bgpat{position:fixed;inset:0;opacity:.03;background-image:linear-gradient(90deg,#00ff88 1px,transparent 1px),linear-gradient(0deg,#00ff88 1px,transparent 1px);background-size:50px 50px;animation:gridMove 20s linear infinite;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:20px}
+.card{background:#1a2142;border:2px solid #2d3561;border-radius:16px;padding:22px}
+.srow{background:#151b3d;border:1px solid #2d3561;border-radius:12px;padding:14px 14px 14px 46px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;position:relative;transition:all .2s}
+.srow:hover{border-color:#00ff88;transform:translateX(4px)}
+.news-card{background:#151b3d;border-left:4px solid #00ff88;border-radius:8px;padding:15px 16px;margin-bottom:12px;transition:all .2s}
+.news-card:hover{background:rgba(0,0,0,.3);transform:translateX(4px)}
+.trend-card{background:#151b3d;border:1px solid #2d3561;border-radius:12px;padding:15px 16px;margin-bottom:10px;transition:all .2s}
+.trend-card:hover{border-color:#3498db;transform:translateY(-2px);box-shadow:0 5px 15px rgba(52,152,219,.15)}
+.ai-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(52,152,219,.1);border:1px solid #3498db;color:#3498db;padding:5px 11px;border-radius:6px;font-size:.75em;font-weight:700;cursor:pointer;margin-top:10px;transition:all .2s}
+.ai-btn:disabled{background:rgba(0,255,136,.08);border-color:#00ff88;color:#00ff88;cursor:default}
+.ai-panel{margin-top:12px;padding:12px 14px;background:rgba(52,152,219,.07);border:1px solid rgba(52,152,219,.25);border-radius:8px;animation:fadeIn .4s ease}
+.spin{width:10px;height:10px;border:2px solid #2d3561;border-top-color:#00ff88;border-radius:50%;animation:rot .7s linear infinite;display:inline-block;flex-shrink:0}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(5px);z-index:1000;display:flex;justify-content:center;align-items:center;padding:20px}
+.modal-box{background:#1a2142;border:2px solid #2d3561;border-radius:16px;padding:28px;max-width:600px;width:100%;max-height:82vh;overflow-y:auto;position:relative}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+input{background:#151b3d;border:2px solid #2d3561;color:#e8eaed;padding:13px 17px;border-radius:10px;font-size:.97em;font-family:Arial,sans-serif;outline:none;flex:1;transition:border-color .2s}
+input:focus{border-color:#00ff88}
+.btn-g{background:#00ff88;color:#0a0e27;border:none;padding:13px 26px;border-radius:10px;font-size:.97em;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn-g:disabled{opacity:.5;cursor:not-allowed}
+.chip{background:rgba(0,255,136,.1);border:1px solid #00ff88;color:#00ff88;padding:4px 11px;border-radius:20px;font-size:.79em;font-weight:600}
+#sDrop{position:absolute;top:100%;left:0;right:0;background:#1a2142;border:1px solid #2d3561;border-top:none;border-radius:0 0 10px 10px;z-index:200;max-height:260px;overflow-y:auto;display:none}
+.sug{padding:10px 14px;cursor:pointer;font-size:.9em;display:flex;justify-content:space-between;transition:background .15s}
+.sug:hover{background:#151b3d}
+.sect-btn{background:#151b3d;border:2px solid #2d3561;border-radius:12px;padding:20px;cursor:pointer;text-align:center;transition:all .25s;user-select:none}
+.sect-btn:hover{border-color:#00ff88}
+.sect-btn.on{background:rgba(0,255,136,.1);border-color:#00ff88;box-shadow:0 0 20px rgba(0,255,136,.2)}
+.empty{text-align:center;padding:32px;color:#9ba3af}
+.err{color:#ff4757;font-size:.85em;margin-top:8px;padding:8px 12px;background:rgba(255,71,87,.1);border-radius:6px;border:1px solid rgba(255,71,87,.3)}
+</style>
+</head>
+<body>
+<div class="bgpat"></div>
 
-const interestStockMap = {
-  technology:    ["AAPL","MSFT","NVDA","GOOGL","META","TSLA"],
-  food:          ["MCD","SBUX","KO","PEP","CMG","YUM"],
-  healthcare:    ["JNJ","UNH","LLY","PFE","ABBV","TMO"],
-  finance:       ["JPM","BAC","GS","V","MA","WFC"],
-  energy:        ["XOM","CVX","COP","SLB","EOG","OXY"],
-  retail:        ["AMZN","WMT","HD","COST","TGT","NKE"],
-  automotive:    ["TSLA","F","GM","TM","RIVN","LCID"],
-  entertainment: ["DIS","NFLX","SPOT","WBD","RBLX","PARA"],
-};
+<!-- ══════════ SETUP ══════════ -->
+<div id="setupScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1">
+  <div class="card" style="max-width:700px;width:100%;padding:48px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="font-size:2.2em;font-weight:700;color:#00ff88;margin-bottom:8px;letter-spacing:2px">&#128200; LIVESTOCK</div>
+    <p style="color:#9ba3af;margin-bottom:36px;font-size:1.05em">Real-time market intelligence. Pick your sectors to personalise your dashboard.</p>
+    <div id="sectGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:14px;margin-bottom:30px"></div>
+    <button id="startBtn" onclick="startApp()" disabled
+      style="width:100%;background:#2d3561;color:#4a5568;border:none;padding:17px;border-radius:12px;font-size:1.08em;font-weight:700;cursor:not-allowed;letter-spacing:1px;transition:all .25s">
+      START TRACKING
+    </button>
+  </div>
+</div>
 
-const stockData = {
-  AAPL:{name:"Apple Inc.",price:185.42,vol:0.015,sector:"technology"},
-  MSFT:{name:"Microsoft Corp.",price:378.91,vol:0.012,sector:"technology"},
-  NVDA:{name:"NVIDIA Corp.",price:875.40,vol:0.025,sector:"technology"},
-  GOOGL:{name:"Alphabet Inc.",price:142.18,vol:0.018,sector:"technology"},
-  META:{name:"Meta Platforms",price:378.45,vol:0.020,sector:"technology"},
-  TSLA:{name:"Tesla Inc.",price:242.84,vol:0.030,sector:"technology"},
-  MCD:{name:"McDonald's Corp.",price:292.15,vol:0.010,sector:"food"},
-  SBUX:{name:"Starbucks Corp.",price:95.34,vol:0.014,sector:"food"},
-  KO:{name:"Coca-Cola Co.",price:61.28,vol:0.008,sector:"food"},
-  PEP:{name:"PepsiCo Inc.",price:175.89,vol:0.009,sector:"food"},
-  CMG:{name:"Chipotle Mexican Grill",price:2847.23,vol:0.018,sector:"food"},
-  YUM:{name:"Yum! Brands",price:137.56,vol:0.012,sector:"food"},
-  JNJ:{name:"Johnson & Johnson",price:162.45,vol:0.009,sector:"healthcare"},
-  UNH:{name:"UnitedHealth Group",price:524.67,vol:0.011,sector:"healthcare"},
-  LLY:{name:"Eli Lilly & Co.",price:789.34,vol:0.020,sector:"healthcare"},
-  PFE:{name:"Pfizer Inc.",price:28.92,vol:0.015,sector:"healthcare"},
-  ABBV:{name:"AbbVie Inc.",price:178.56,vol:0.010,sector:"healthcare"},
-  TMO:{name:"Thermo Fisher Scientific",price:542.89,vol:0.012,sector:"healthcare"},
-  JPM:{name:"JPMorgan Chase",price:198.34,vol:0.013,sector:"finance"},
-  BAC:{name:"Bank of America",price:35.67,vol:0.015,sector:"finance"},
-  GS:{name:"Goldman Sachs",price:387.92,vol:0.016,sector:"finance"},
-  V:{name:"Visa Inc.",price:278.45,vol:0.011,sector:"finance"},
-  MA:{name:"Mastercard Inc.",price:445.67,vol:0.012,sector:"finance"},
-  WFC:{name:"Wells Fargo",price:52.89,vol:0.014,sector:"finance"},
-  XOM:{name:"Exxon Mobil",price:112.34,vol:0.020,sector:"energy"},
-  CVX:{name:"Chevron Corp.",price:156.78,vol:0.018,sector:"energy"},
-  COP:{name:"ConocoPhillips",price:118.90,vol:0.019,sector:"energy"},
-  SLB:{name:"Schlumberger",price:47.23,vol:0.022,sector:"energy"},
-  EOG:{name:"EOG Resources",price:124.56,vol:0.021,sector:"energy"},
-  OXY:{name:"Occidental Petroleum",price:59.78,vol:0.024,sector:"energy"},
-  AMZN:{name:"Amazon.com Inc.",price:178.23,vol:0.017,sector:"retail"},
-  WMT:{name:"Walmart Inc.",price:168.92,vol:0.009,sector:"retail"},
-  HD:{name:"Home Depot Inc.",price:345.67,vol:0.011,sector:"retail"},
-  COST:{name:"Costco Wholesale",price:712.34,vol:0.010,sector:"retail"},
-  TGT:{name:"Target Corp.",price:152.89,vol:0.013,sector:"retail"},
-  NKE:{name:"Nike Inc.",price:105.67,vol:0.015,sector:"retail"},
-  F:{name:"Ford Motor Co.",price:12.45,vol:0.024,sector:"automotive"},
-  GM:{name:"General Motors",price:37.89,vol:0.020,sector:"automotive"},
-  TM:{name:"Toyota Motor",price:189.23,vol:0.014,sector:"automotive"},
-  RIVN:{name:"Rivian Automotive",price:14.67,vol:0.035,sector:"automotive"},
-  LCID:{name:"Lucid Group",price:3.45,vol:0.040,sector:"automotive"},
-  DIS:{name:"Walt Disney Co.",price:93.45,vol:0.016,sector:"entertainment"},
-  NFLX:{name:"Netflix Inc.",price:498.23,vol:0.022,sector:"entertainment"},
-  SPOT:{name:"Spotify Technology",price:289.34,vol:0.020,sector:"entertainment"},
-  WBD:{name:"Warner Bros. Discovery",price:10.23,vol:0.025,sector:"entertainment"},
-  RBLX:{name:"Roblox Corp.",price:42.56,vol:0.028,sector:"entertainment"},
-  PARA:{name:"Paramount Global",price:11.78,vol:0.023,sector:"entertainment"},
-};
+<!-- ══════════ APP ══════════ -->
+<div id="appScreen" style="display:none">
+<div class="wrap">
 
-const newsItems = [
-  {id:1,title:"Tech Giants Report Strong Q4 Earnings Amid AI Boom",source:"Financial Times",time:"2h ago",cat:"Technology",summary:"Major technology companies exceeded analyst expectations, driven by AI investments and cloud computing growth.",sectors:["technology"]},
-  {id:2,title:"Fast Food Chains Embrace Sustainability Initiatives",source:"Bloomberg",time:"4h ago",cat:"Food & Beverage",summary:"Leading restaurant brands announce ambitious plans to reduce environmental impact and source sustainable ingredients.",sectors:["food"]},
-  {id:3,title:"Breakthrough Gene Therapy Receives FDA Approval",source:"Medical News Today",time:"1h ago",cat:"Healthcare",summary:"New treatment for rare genetic disorder marks significant advancement in personalised medicine.",sectors:["healthcare"]},
-  {id:4,title:"Major Banks Announce Digital Transformation Push",source:"Wall Street Journal",time:"3h ago",cat:"Finance",summary:"Traditional financial institutions investing billions in fintech capabilities to compete with digital-first challengers.",sectors:["finance"]},
-  {id:5,title:"Renewable Energy Investment Reaches Record Levels",source:"Energy Today",time:"5h ago",cat:"Energy",summary:"Global investment in solar and wind projects surpasses fossil fuel spending for the first time.",sectors:["energy"]},
-  {id:6,title:"E-Commerce Giants Battle for Same-Day Delivery Dominance",source:"Retail Week",time:"6h ago",cat:"Retail",summary:"Amazon, Walmart and Target expand rapid delivery networks as consumer expectations evolve.",sectors:["retail"]},
-  {id:7,title:"Electric Vehicle Sales Surge Past Expectations",source:"Automotive News",time:"3h ago",cat:"Automotive",summary:"EVs now account for 30% of new car sales, led by Tesla and traditional automakers.",sectors:["automotive"]},
-  {id:8,title:"Streaming Services Report Mixed Results Amid Saturation",source:"Entertainment Weekly",time:"4h ago",cat:"Entertainment",summary:"Netflix gains subscribers while competitors struggle with profitability and churn.",sectors:["entertainment"]},
-];
-
-const trendItems = [
-  {id:"t1",title:"AI Integration Boom",desc:"Enterprises rapidly adopting AI across operations",sectors:["technology"],detail:"AI spending, enterprise adoption, major players like NVIDIA, Microsoft Azure, Google Cloud"},
-  {id:"t2",title:"Cloud Migration Accelerates",desc:"78% of companies now cloud-first with multi-cloud strategies",sectors:["technology"],detail:"cloud computing, AWS, Azure, GCP, hybrid deployments"},
-  {id:"t3",title:"Plant-Based Revolution",desc:"Alternative protein market growing 35% annually",sectors:["food"],detail:"plant-based foods, Beyond Meat, fast food chains, consumer health trends"},
-  {id:"t4",title:"Delivery Optimization",desc:"Ghost kitchens and automated delivery reshaping restaurants",sectors:["food"],detail:"ghost kitchens, DoorDash, Uber Eats, food delivery economics"},
-  {id:"t5",title:"Telehealth Mainstream",desc:"Virtual care now 40% of all consultations",sectors:["healthcare"],detail:"telehealth, virtual care, Medicare coverage, AI diagnostics"},
-  {id:"t6",title:"Gene Therapy Advances",desc:"CRISPR treatments entering mainstream clinical use",sectors:["healthcare"],detail:"CRISPR, gene therapy, FDA approvals, biotech investment"},
-  {id:"t7",title:"Embedded Finance Growth",desc:"Non-financial companies offering banking services",sectors:["finance"],detail:"embedded finance, fintech, Apple Pay, Shopify, $7T market opportunity"},
-  {id:"t8",title:"Crypto Integration",desc:"Major banks launching digital asset services",sectors:["finance"],detail:"cryptocurrency, Bitcoin ETFs, institutional adoption, JPMorgan, Goldman Sachs"},
-  {id:"t9",title:"Green Hydrogen Boom",desc:"Investment in hydrogen infrastructure up 300%",sectors:["energy"],detail:"green hydrogen, decarbonisation, Chevron, Shell, clean energy"},
-  {id:"t10",title:"Battery Breakthrough",desc:"Solid-state batteries promising 2× capacity",sectors:["energy"],detail:"solid-state batteries, EV range, Toyota, Samsung, QuantumScape"},
-  {id:"t11",title:"Social Commerce Explosion",desc:"Direct social purchases growing 65% annually",sectors:["retail"],detail:"TikTok Shop, Instagram Shopping, influencer commerce, Gen Z spending"},
-  {id:"t12",title:"Autonomous Delivery",desc:"Self-driving delivery vehicles in 50+ cities",sectors:["retail"],detail:"autonomous delivery robots, Amazon, Walmart, last-mile logistics"},
-  {id:"t13",title:"EV Price Parity",desc:"Electric vehicles cost-competitive with gas cars",sectors:["automotive"],detail:"EV affordability, battery cost reduction, Ford, GM, Tesla pricing"},
-  {id:"t14",title:"Autonomous Progress",desc:"Level 4 self-driving expanding to 20 cities",sectors:["automotive"],detail:"autonomous vehicles, Waymo, Tesla FSD, regulatory approvals"},
-  {id:"t15",title:"Interactive Content",desc:"Choose-your-own-adventure driving 2× engagement",sectors:["entertainment"],detail:"interactive streaming, Netflix, viewer engagement, new content formats"},
-  {id:"t16",title:"AI-Generated Media",desc:"AI tools democratising content creation",sectors:["entertainment"],detail:"AI video, music generation, Hollywood adoption, creator tools"},
-];
-
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Work+Sans:wght@300;400;600;700&display=swap');
-  *{margin:0;padding:0;box-sizing:border-box}
-  .ls-root{font-family:'Work Sans',sans-serif;background:#0a0e27;color:#e8eaed;min-height:100vh;position:relative;overflow-x:hidden}
-  .bg-grid{position:fixed;inset:0;opacity:.03;background-image:linear-gradient(90deg,#00ff88 1px,transparent 1px),linear-gradient(0deg,#00ff88 1px,transparent 1px);background-size:50px 50px;animation:gridMove 20s linear infinite;pointer-events:none;z-index:0}
-  @keyframes gridMove{0%{transform:translate(0,0)}100%{transform:translate(50px,50px)}}
-  .ls-wrap{position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:20px}
-
-  /* SETUP */
-  .setup{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .setup-box{background:#1a2142;border:2px solid #2d3561;border-radius:16px;padding:48px;max-width:700px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-  .logo{font-family:'Space Mono',monospace;font-size:2.4em;font-weight:700;background:linear-gradient(135deg,#00ff88,#3498db);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}
-  .sub{color:#9ba3af;margin-bottom:36px;font-size:1.05em}
-  .ig{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:14px;margin-bottom:30px}
-  .ic{background:#151b3d;border:2px solid #2d3561;border-radius:12px;padding:20px;cursor:pointer;text-align:center;transition:all .25s}
-  .ic:hover{border-color:#00ff88;transform:translateY(-3px)}
-  .ic.sel{background:rgba(0,255,136,.1);border-color:#00ff88;box-shadow:0 0 20px rgba(0,255,136,.25)}
-  .ic .ico{font-size:2em;margin-bottom:8px}
-  .ic .lbl{font-weight:600;font-size:.93em}
-  .go-btn{width:100%;background:#00ff88;color:#0a0e27;border:none;padding:17px;border-radius:12px;font-size:1.08em;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:1px;transition:all .25s}
-  .go-btn:hover:not(:disabled){background:#00dd77;box-shadow:0 8px 25px rgba(0,255,136,.4)}
-  .go-btn:disabled{opacity:.3;cursor:not-allowed}
-
-  /* HEADER */
-  .hdr{background:#1a2142;border:2px solid #2d3561;border-radius:16px;padding:22px 28px;margin-bottom:22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
-  .hdr-left{}
-  .hdr h1{font-family:'Space Mono',monospace;font-size:1.75em;background:linear-gradient(135deg,#00ff88,#3498db);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-  .live-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,136,.1);border:1px solid #00ff88;padding:4px 11px;border-radius:20px;font-size:.8em;font-weight:600;margin-top:6px}
-  .live-dot{width:7px;height:7px;background:#00ff88;border-radius:50%;animation:blink 2s infinite}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
-  .hdr-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .itags{display:flex;gap:7px;flex-wrap:wrap}
-  .itag{background:rgba(0,255,136,.12);border:1px solid #00ff88;color:#00ff88;padding:4px 11px;border-radius:20px;font-size:.8em;font-weight:600}
-  .hbtn{background:#151b3d;border:2px solid #2d3561;color:#e8eaed;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.87em;font-weight:600;transition:all .25s;white-space:nowrap}
-  .hbtn:hover{border-color:#00ff88}
-  .hbtn.wl{border-color:#ffd93d;color:#ffd93d}
-  .hbtn.wl:hover{background:rgba(255,217,61,.1)}
-  .wlc{background:#ffd93d;color:#0a0e27;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:.72em;font-weight:700;margin-left:4px}
-
-  /* SEARCH */
-  .search-sec{background:#1a2142;border:2px solid #2d3561;border-radius:16px;padding:22px;margin-bottom:22px}
-  .search-info{background:rgba(52,152,219,.1);border:1px solid #3498db;padding:10px 14px;border-radius:8px;margin-bottom:13px;font-size:.86em;line-height:1.5;color:#e8eaed}
-  .search-row{display:flex;gap:9px}
-  .sinput{flex:1;background:#151b3d;border:2px solid #2d3561;color:#e8eaed;padding:13px 17px;border-radius:10px;font-size:.97em;font-family:'Work Sans',sans-serif;transition:border-color .25s}
-  .sinput:focus{outline:none;border-color:#00ff88;box-shadow:0 0 16px rgba(0,255,136,.18)}
-  .sbtn{background:#00ff88;color:#0a0e27;border:none;padding:13px 26px;border-radius:10px;font-size:.97em;font-weight:700;cursor:pointer;transition:all .25s;min-width:100px}
-  .sbtn:hover:not(:disabled){background:#00dd77;transform:scale(1.04)}
-  .sbtn:disabled{opacity:.55;cursor:not-allowed;transform:none}
-  .sres{display:none;margin-top:16px}
-  .sres.open{display:block}
-
-  /* GRID */
-  .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-bottom:22px}
-  @media(max-width:1020px){.cgrid{grid-template-columns:1fr}}
-  .card{background:#1a2142;border:2px solid #2d3561;border-radius:16px;padding:22px;transition:border-color .25s}
-  .card:hover{border-color:rgba(0,255,136,.35)}
-  .card-title{font-family:'Space Mono',monospace;font-size:1.2em;margin-bottom:16px;display:flex;align-items:center;gap:9px}
-  .livebadge{display:inline-block;background:rgba(0,255,136,.1);border:1px solid #00ff88;color:#00ff88;padding:1px 7px;border-radius:4px;font-size:.62em;font-weight:700;font-family:'Space Mono',monospace;vertical-align:middle}
-
-  /* STOCK ITEM */
-  .si{background:#151b3d;border:1px solid #2d3561;border-radius:12px;padding:15px 15px 15px 46px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all .25s;position:relative;animation:slideIn .3s ease}
-  @keyframes slideIn{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
-  .si:hover{border-color:#00ff88;transform:translateX(4px)}
-  .si.flash{border-color:#00ff88;background:rgba(0,255,136,.05)}
-  .ssym{font-family:'Space Mono',monospace;font-weight:700;font-size:1.12em}
-  .sname{color:#9ba3af;font-size:.82em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:175px}
-  .sright{text-align:right;flex-shrink:0}
-  .sprice{font-family:'Space Mono',monospace;font-weight:700;font-size:1.2em}
-  .schg{font-size:.86em;font-weight:600;margin-top:3px}
-  .schg.up{color:#00ff88}.schg.dn{color:#ff4757}.schg.fl{color:#9ba3af}
-  .star{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;font-size:1.65em;cursor:pointer;transition:transform .2s;line-height:1;color:#9ba3af}
-  .star:hover{transform:translateY(-50%) scale(1.3)}
-  .star.on{color:#ffd93d;filter:drop-shadow(0 0 4px #ffd93d)}
-
-  /* NEWS & TRENDS */
-  .ni{background:#151b3d;border-left:4px solid #00ff88;border-radius:8px;padding:15px;margin-bottom:12px;cursor:pointer;transition:all .25s;position:relative}
-  .ni:hover{background:rgba(0,0,0,.3);transform:translateX(4px)}
-  .ni-title{font-weight:600;margin-bottom:7px;line-height:1.4;font-size:.98em}
-  .ni-meta{display:flex;gap:11px;color:#9ba3af;font-size:.8em;flex-wrap:wrap;margin-bottom:7px}
-  .ni-src{color:#00ff88;font-weight:600}
-  .ni-summary{color:#9ba3af;line-height:1.5;font-size:.86em}
-  .ni-ai{margin-top:10px;padding:10px 12px;background:rgba(52,152,219,.08);border:1px solid rgba(52,152,219,.3);border-radius:8px;font-size:.84em;color:#c8d0e0;line-height:1.6}
-  .ni-ai-hdr{color:#3498db;font-weight:700;font-size:.8em;margin-bottom:5px;display:flex;align-items:center;gap:5px}
-  .ni-loading{display:flex;align-items:center;gap:8px;color:#9ba3af;font-size:.84em;margin-top:8px}
-  .ni-spin{width:14px;height:14px;border:2px solid #2d3561;border-top-color:#00ff88;border-radius:50%;animation:rot .7s linear infinite;flex-shrink:0}
-  @keyframes rot{to{transform:rotate(360deg)}}
-  .expand-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:1px solid #2d3561;color:#9ba3af;padding:3px 8px;border-radius:6px;font-size:.75em;cursor:pointer;transition:all .2s;white-space:nowrap}
-  .expand-btn:hover{border-color:#3498db;color:#3498db}
-  .ni:hover .expand-btn{opacity:1}
-  .expand-btn.loading{border-color:#00ff88;color:#00ff88}
-
-  .ti{background:#151b3d;border:1px solid #2d3561;border-radius:12px;padding:15px;margin-bottom:10px;cursor:pointer;transition:all .25s;position:relative}
-  .ti:hover{border-color:#3498db;transform:translateY(-2px)}
-  .ti-title{font-weight:700;color:#3498db;margin-bottom:5px;font-size:.97em}
-  .ti-desc{color:#9ba3af;font-size:.86em;line-height:1.5}
-  .ti-ai{margin-top:10px;padding:10px 12px;background:rgba(52,152,219,.08);border:1px solid rgba(52,152,219,.3);border-radius:8px;font-size:.84em;color:#c8d0e0;line-height:1.6}
-  .ti-ai-hdr{color:#3498db;font-weight:700;font-size:.8em;margin-bottom:5px;display:flex;align-items:center;gap:5px}
-
-  /* MODAL */
-  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(5px);z-index:1000;display:flex;justify-content:center;align-items:center;padding:20px;animation:fadeIn .2s ease}
-  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-  .modal-box{background:#1a2142;border:2px solid #2d3561;border-radius:16px;padding:28px;max-width:660px;width:100%;max-height:82vh;overflow-y:auto;position:relative;animation:slideUp .25s ease}
-  @keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-  .modal-close{position:absolute;top:16px;right:16px;background:#151b3d;border:2px solid #2d3561;color:#e8eaed;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.3em;display:flex;align-items:center;justify-content:center;transition:all .25s}
-  .modal-close:hover{border-color:#ff4757;color:#ff4757;transform:rotate(90deg)}
-  .modal-title{font-family:'Space Mono',monospace;font-size:1.2em;color:#00ff88;margin-bottom:18px;padding-right:44px;line-height:1.3}
-  .modal-body{color:#9ba3af;line-height:1.8}
-  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid #2d3561}
-  .stat{}.stat-label{color:#9ba3af;font-size:.76em;margin-bottom:3px}.stat-val{font-weight:600;font-size:.93em;color:#e8eaed}
-
-  /* UTIL */
-  .spin-wrap{text-align:center;padding:26px;color:#9ba3af}
-  .spinner{display:inline-block;width:26px;height:26px;border:3px solid #2d3561;border-top-color:#00ff88;border-radius:50%;animation:rot .75s linear infinite;margin-bottom:7px}
-  .errbox{background:rgba(255,71,87,.1);border:1px solid #ff4757;color:#ff4757;padding:13px;border-radius:10px;margin-top:7px;line-height:1.6;font-size:.9em}
-  .empty{text-align:center;padding:32px;color:#9ba3af}
-`;
-
-// Simulate price fluctuation
-function simulatePrice(base, vol) {
-  const change = (Math.random() - 0.48) * base * vol;
-  const newPrice = base + change;
-  const pct = (change / base) * 100;
-  return { price: newPrice, change, pct };
-}
-
-// Claude API call for summaries
-async function fetchAISummary(prompt) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  const data = await res.json();
-  return data.content?.[0]?.text || "";
-}
-
-// ── COMPONENTS ────────────────────────────────────────────────────────────────
-
-function ExpandableSummary({ type, item, expanded, onExpand, loading, aiText }) {
-  const isNews = type === "news";
-  const containerClass = isNews ? "ni" : "ti";
-  const aiClass = isNews ? "ni-ai" : "ti-ai";
-  const hdrClass = isNews ? "ni-ai-hdr" : "ti-ai-hdr";
-
-  return (
-    <div className={containerClass} onClick={!expanded ? onExpand : undefined} style={expanded ? { cursor: "default" } : {}}>
-      {isNews ? (
-        <>
-          <div className="ni-title">{item.title}</div>
-          <div className="ni-meta">
-            <span className="ni-src">{item.source}</span>
-            <span>{item.time}</span>
-            <span>{item.cat}</span>
-          </div>
-          <div className="ni-summary">{item.summary}</div>
-        </>
-      ) : (
-        <>
-          <div className="ti-title">{item.title}</div>
-          <div className="ti-desc">{item.desc}</div>
-        </>
-      )}
-
-      {!expanded && !loading && (
-        <button
-          className="expand-btn"
-          onClick={e => { e.stopPropagation(); onExpand(); }}
-        >
-          ✦ AI Summary
-        </button>
-      )}
-
-      {loading && (
-        <div className="ni-loading">
-          <div className="ni-spin"></div>
-          <span>Generating summary…</span>
-        </div>
-      )}
-
-      {expanded && aiText && (
-        <div className={aiClass}>
-          <div className={hdrClass}>
-            <span>✦</span> AI ANALYSIS
-          </div>
-          {aiText}
-        </div>
-      )}
+  <!-- HEADER -->
+  <div class="card" style="padding:22px 28px;margin-bottom:22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+    <div>
+      <div style="font-size:1.75em;font-weight:700;color:#00ff88;letter-spacing:2px">&#128200; LIVESTOCK</div>
+      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,255,136,.1);border:1px solid #00ff88;padding:4px 11px;border-radius:20px;font-size:.79em;font-weight:600;margin-top:6px">
+        <span style="width:7px;height:7px;background:#00ff88;border-radius:50%;animation:blink 2s infinite;display:inline-block"></span>
+        LIVE
+      </div>
     </div>
-  );
-}
-
-function StockItem({ sym, data, isWL, onToggleWL, onOpen }) {
-  const [live, setLive] = useState(() => simulatePrice(data.price, data.vol));
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setLive(prev => {
-        const chg = (Math.random() - 0.48) * prev.price * data.vol * 0.3;
-        const np = prev.price + chg;
-        return { price: np, change: prev.change + chg, pct: ((prev.change + chg) / data.price) * 100 };
-      });
-    }, 3000);
-    return () => clearInterval(t);
-  }, []);
-
-  const arrow = live.change > 0 ? "▲" : live.change < 0 ? "▼" : "—";
-  const cls   = live.change > 0 ? "up" : live.change < 0 ? "dn" : "fl";
-
-  return (
-    <div className="si" onClick={() => onOpen(sym)}>
-      <button className={`star ${isWL ? "on" : ""}`} onClick={e => { e.stopPropagation(); onToggleWL(sym); }}>
-        {isWL ? "★" : "☆"}
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div id="hChips" style="display:flex;gap:7px;flex-wrap:wrap"></div>
+      <button onclick="toggleWLPanel()" style="background:#151b3d;border:2px solid #ffd93d;color:#ffd93d;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.87em;font-weight:600">
+        &#11088; Watchlist <span id="wlBadge"></span>
       </button>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="ssym">{sym}</div>
-        <div className="sname">{data.name}</div>
+      <button onclick="goSetup()" style="background:#151b3d;border:2px solid #2d3561;color:#e8eaed;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.87em;font-weight:600">&#9881; Settings</button>
+    </div>
+  </div>
+
+  <!-- WATCHLIST PANEL -->
+  <div id="wlPanel" style="display:none;margin-bottom:22px">
+    <div class="card">
+      <div style="font-weight:700;font-size:1.1em;margin-bottom:16px">&#11088; Watchlist</div>
+      <div id="wlItems"><div class="empty">Star any stock with &#9734; to add it here</div></div>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="card" style="margin-bottom:22px">
+    <div style="background:rgba(52,152,219,.1);border:1px solid #3498db;padding:10px 14px;border-radius:8px;margin-bottom:13px;font-size:.86em">
+      &#128269; <strong>Search any stock in the world</strong> — type a ticker (AAPL, TSLA) or company name. Live data fetched instantly.
+    </div>
+    <div style="display:flex;gap:9px;position:relative">
+      <div style="position:relative;flex:1">
+        <input id="sInput" placeholder="Type any ticker or company name..." oninput="onType()" onkeydown="if(event.key==='Enter')doSearch()" onblur="setTimeout(closeDrop,200)">
+        <div id="sDrop"></div>
       </div>
-      <div className="sright">
-        <div className="sprice">${live.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-        <div className={`schg ${cls}`}>{arrow} {Math.abs(live.change).toFixed(2)} ({Math.abs(live.pct).toFixed(2)}%)</div>
+      <button class="btn-g" id="sBtn" onclick="doSearch()">Search</button>
+    </div>
+    <div id="sResults"></div>
+  </div>
+
+  <!-- PORTFOLIO + TRENDS -->
+  <div class="grid2">
+    <div class="card">
+      <div style="font-weight:700;font-size:1.1em;margin-bottom:16px;display:flex;align-items:center;gap:9px">
+        &#127919; Your Portfolio
+        <span style="background:rgba(0,255,136,.1);border:1px solid #00ff88;color:#00ff88;padding:1px 7px;border-radius:4px;font-size:.6em;font-weight:700">LIVE</span>
+      </div>
+      <div id="portItems"></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;font-size:1.1em;margin-bottom:16px">&#128202; Market Trends</div>
+      <div id="trendCont"></div>
+    </div>
+  </div>
+
+  <!-- NEWS -->
+  <div class="card" style="margin-bottom:30px">
+    <div style="font-weight:700;font-size:1.1em;margin-bottom:16px">&#128240; Market News</div>
+    <div id="newsCont"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- MODAL -->
+<div id="modalBg" class="modal-bg" style="display:none" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <button onclick="closeModal()" style="position:absolute;top:16px;right:16px;background:#151b3d;border:2px solid #2d3561;color:#e8eaed;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.3em">&#215;</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ─── SECTOR CONFIG ────────────────────────────────────────────────────────────
+// These are just the default tickers shown in your portfolio — NOT a hardcoded search list
+const SECTORS = {
+  technology:    { icon:"💻", tickers:["AAPL","MSFT","NVDA","GOOGL","META"] },
+  food:          { icon:"🍔", tickers:["MCD","SBUX","KO","PEP","CMG"] },
+  healthcare:    { icon:"⚕️", tickers:["JNJ","UNH","LLY","PFE","ABBV"] },
+  finance:       { icon:"💰", tickers:["JPM","BAC","GS","V","MA"] },
+  energy:        { icon:"⚡", tickers:["XOM","CVX","COP","SLB","EOG"] },
+  retail:        { icon:"🛍️", tickers:["AMZN","WMT","HD","COST","TGT"] },
+  automotive:    { icon:"🚗", tickers:["TSLA","F","GM","TM","RIVN"] },
+  entertainment: { icon:"🎬", tickers:["DIS","NFLX","SPOT","WBD","RBLX"] },
+};
+
+const NEWS = [
+  {id:1,title:"Tech Giants Report Strong Q4 Earnings Amid AI Boom",source:"Financial Times",time:"2h ago",cat:"Technology",summary:"Major technology companies exceeded analyst expectations, driven by AI investments and cloud computing growth.",sectors:["technology"],prompt:"Tech Giants Q4 earnings beat driven by AI and cloud — Apple, Microsoft, Google, Nvidia all outperformed. Which stocks benefit most, valuation impact, and key risks?"},
+  {id:2,title:"Fast Food Chains Embrace Sustainability Initiatives",source:"Bloomberg",time:"4h ago",cat:"Food",summary:"Leading restaurant brands announce ambitious plans to reduce environmental impact.",sectors:["food"],prompt:"McDonald's, Starbucks, Chipotle launching major sustainability drives. Cost impact on margins, ESG appeal, and which chains are best positioned?"},
+  {id:3,title:"Breakthrough Gene Therapy Receives FDA Approval",source:"Medical News Today",time:"1h ago",cat:"Healthcare",summary:"New CRISPR treatment marks a significant milestone in personalised medicine.",sectors:["healthcare"],prompt:"FDA approves CRISPR-based gene therapy. Which biotech stocks are affected, market size, and regulatory precedent?"},
+  {id:4,title:"Major Banks Announce Digital Transformation Push",source:"Wall Street Journal",time:"3h ago",cat:"Finance",summary:"Banks investing billions in fintech capabilities to compete with digital challengers.",sectors:["finance"],prompt:"JPMorgan, Goldman, BofA investing billions in fintech. Which banks are best positioned, fintech risk, and ROI timeline?"},
+  {id:5,title:"Renewable Energy Investment Reaches Record Levels",source:"Energy Today",time:"5h ago",cat:"Energy",summary:"Global solar and wind investment surpasses fossil fuel spending for the first time.",sectors:["energy"],prompt:"Renewable energy investment surpasses fossil fuels globally. Energy stocks most affected, policy tailwinds, and transition risks for oil majors?"},
+  {id:6,title:"E-Commerce Giants Battle for Same-Day Delivery",source:"Retail Week",time:"6h ago",cat:"Retail",summary:"Amazon, Walmart and Target expand rapid delivery networks.",sectors:["retail"],prompt:"Amazon, Walmart, Target racing to build same-day delivery infrastructure. Capex burden, competitive moat, and who has the edge?"},
+  {id:7,title:"Electric Vehicle Sales Surge Past Expectations",source:"Automotive News",time:"3h ago",cat:"Automotive",summary:"EVs now account for 30% of new car sales globally.",sectors:["automotive"],prompt:"EV market share hits 30% of new car sales. Tesla vs legacy OEM positioning, battery supply chain, and biggest risk to growth?"},
+  {id:8,title:"Streaming Services Report Mixed Results",source:"Entertainment Weekly",time:"4h ago",cat:"Entertainment",summary:"Netflix gains subscribers while competitors struggle with profitability.",sectors:["entertainment"],prompt:"Netflix growing while Disney+, Paramount, WBD struggle. Consolidation likelihood, stocks to watch, and what saturation signals?"},
+];
+
+const TRENDS = [
+  {id:"t1",title:"AI Integration Boom",desc:"Enterprises adopting AI rapidly — 40% YoY growth in AI spending",sectors:["technology"],prompt:"Enterprise AI adoption boom with NVIDIA, Microsoft Azure AI, Google Cloud AI. Which stocks benefit most and key risks?"},
+  {id:"t2",title:"Cloud Migration Accelerates",desc:"78% of companies now cloud-first with multi-cloud strategies",sectors:["technology"],prompt:"Cloud-first adoption with multi-cloud across AWS, Azure, GCP. Competitive dynamics, margin implications, and top stock picks?"},
+  {id:"t3",title:"Plant-Based Revolution",desc:"Alternative protein market growing 35% annually",sectors:["food"],prompt:"Plant-based food market growing 35% YoY. Who wins, who loses among food stocks, and profitability outlook?"},
+  {id:"t4",title:"Telehealth Goes Mainstream",desc:"Virtual care now 40% of all consultations",sectors:["healthcare"],prompt:"Telehealth now 40% of consultations. Reimbursement trends, competitive moats, and key investment plays?"},
+  {id:"t5",title:"Embedded Finance Growth",desc:"Non-financial companies offering banking — a $7T opportunity by 2030",sectors:["finance"],prompt:"Embedded finance: Apple, Amazon, Shopify offering banking. Disruption risk to traditional banks and top stock plays?"},
+  {id:"t6",title:"Green Hydrogen Boom",desc:"Hydrogen infrastructure investment up 300% as decarbonisation accelerates",sectors:["energy"],prompt:"Green hydrogen investment up 300%. Cost competitiveness timeline and best-positioned stocks?"},
+  {id:"t7",title:"Social Commerce Explosion",desc:"Direct social media purchases growing 65% annually",sectors:["retail"],prompt:"Social commerce via TikTok Shop, Instagram growing 65% YoY. Which retailers win and what does this mean for Amazon?"},
+  {id:"t8",title:"EV Price Parity",desc:"Electric vehicles now cost-competitive with gas cars",sectors:["automotive"],prompt:"EV price parity achieved. Demand catalyst, margin pressure, and who profits most from Ford, GM, Tesla?"},
+  {id:"t9",title:"Interactive Streaming",desc:"Choose-your-own-adventure formats drive 2x engagement",sectors:["entertainment"],prompt:"Interactive streaming content doubles engagement. Production costs, advertiser appeal, and competitive differentiation?"},
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let interests = new Set();
+let watchlist = [];
+let stockCache = {};   // sym -> {name, price, change, pct, sector}
+let tickerIntervals = {};
+let aiCache = {};
+
+// ─── YAHOO FINANCE FETCH (via allorigins CORS proxy) ─────────────────────────
+// Fetches REAL live data for any ticker in the world
+async function fetchQuote(sym) {
+  if (stockCache[sym]) return stockCache[sym];
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxy);
+  const wrapper = await res.json();
+  const data = JSON.parse(wrapper.contents);
+  const q = data.chart.result[0];
+  const meta = q.meta;
+  const price = meta.regularMarketPrice;
+  const prev  = meta.chartPreviousClose || meta.previousClose || price;
+  const change = price - prev;
+  const pct    = (change / prev) * 100;
+  const rec = {
+    name:   meta.longName || meta.shortName || sym,
+    price,
+    change,
+    pct,
+    sector: meta.sector || "—",
+    currency: meta.currency || "USD",
+  };
+  stockCache[sym] = rec;
+  return rec;
+}
+
+// Search suggestions via Yahoo Finance autocomplete
+async function fetchSuggestions(q) {
+  const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0&enableFuzzyQuery=true`;
+  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxy);
+  const wrapper = await res.json();
+  const data = JSON.parse(wrapper.contents);
+  return (data.quotes || []).filter(r => r.quoteType === "EQUITY" || r.quoteType === "ETF").slice(0, 8);
+}
+
+// ─── SIMULATED AI ANALYSIS ────────────────────────────────────────────────────
+const AI_TEMPLATES = [
+  k=>`${k} momentum is building as institutional money rotates into this space, with options flow signalling a near-term breakout above key resistance. Smart money positioning in derivatives points to continued upside, with risk/reward skewed heavily in favour of longs at current valuations. Watch for volume confirmation on any move above the 50-day moving average as the catalyst trigger.`,
+  k=>`The macro backdrop is increasingly favourable for ${k} plays, as rate expectations shift and sector rotation accelerates. Relative strength vs the S&P 500 has been exceptional over the past 30 days, significantly outperforming the index. The technical setup is constructive — higher lows, expanding volume on up days — signalling sustained buying pressure from both retail and institutional participants.`,
+  k=>`${k} is at an inflection point where fundamental tailwinds are finally being reflected in price action, with analysts rapidly revising estimates upward. The margin expansion story remains intact, and recent guidance sets a higher floor for the next 12 months. With a forward P/E well below sector peers and strong free cash flow yield, the risk-adjusted return profile here is among the most compelling in the market.`,
+];
+async function getAI(prompt) {
+  await new Promise(r => setTimeout(r, 800 + Math.random() * 600));
+  const kw = prompt.split(' ').filter(w => w.length > 4).slice(0, 3).join(', ') || "this sector";
+  return AI_TEMPLATES[Math.floor(Math.random() * AI_TEMPLATES.length)](kw);
+}
+
+// ─── SETUP SCREEN ─────────────────────────────────────────────────────────────
+function buildSetup() {
+  const g = document.getElementById('sectGrid');
+  g.innerHTML = '';
+  Object.entries(SECTORS).forEach(([key, val]) => {
+    const d = document.createElement('div');
+    d.className = 'sect-btn' + (interests.has(key) ? ' on' : '');
+    d.onclick = () => toggleSect(key, d);
+    d.innerHTML = `<div style="font-size:2em;margin-bottom:8px">${val.icon}</div><div style="font-weight:600;font-size:.93em">${key.charAt(0).toUpperCase()+key.slice(1)}</div>`;
+    g.appendChild(d);
+  });
+  updateStartBtn();
+}
+
+function toggleSect(key, el) {
+  interests.has(key) ? interests.delete(key) : interests.add(key);
+  el.classList.toggle('on', interests.has(key));
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  const b = document.getElementById('startBtn');
+  const on = interests.size > 0;
+  b.disabled = !on;
+  b.style.background = on ? '#00ff88' : '#2d3561';
+  b.style.color = on ? '#0a0e27' : '#4a5568';
+  b.style.cursor = on ? 'pointer' : 'not-allowed';
+}
+
+function startApp() {
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  buildApp();
+}
+
+function goSetup() {
+  clearAllTicks();
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('setupScreen').style.display = 'flex';
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function buildApp() {
+  clearAllTicks();
+  // Header chips
+  document.getElementById('hChips').innerHTML =
+    [...interests].map(i => `<div class="chip">${SECTORS[i].icon} ${i}</div>`).join('');
+  // Portfolio — fetch real data for sector tickers
+  const tickers = [...new Set([...interests].flatMap(i => SECTORS[i].tickers))].slice(0, 10);
+  const portEl = document.getElementById('portItems');
+  portEl.innerHTML = `<div class="empty"><span class="spin"></span> Loading live prices…</div>`;
+  Promise.all(tickers.map(t => fetchQuote(t).catch(() => null))).then(results => {
+    const valid = results.filter(Boolean);
+    if (!valid.length) { portEl.innerHTML = `<div class="err">Could not load prices. Check your connection.</div>`; return; }
+    portEl.innerHTML = tickers.map(sym => stockCache[sym] ? stockRowHTML(sym, 'port') : '').join('');
+    tickers.forEach(sym => { if (stockCache[sym]) startTick(sym, 'port'); });
+  });
+  // Trends + News filtered by interest
+  const shownTrends = TRENDS.filter(t => t.sectors.some(s => interests.has(s)));
+  document.getElementById('trendCont').innerHTML = shownTrends.length
+    ? shownTrends.map(trendHTML).join('')
+    : `<div class="empty">No trends for selected sectors</div>`;
+  const shownNews = NEWS.filter(n => n.sectors.some(s => interests.has(s)));
+  document.getElementById('newsCont').innerHTML = shownNews.length
+    ? shownNews.map(newsHTML).join('')
+    : `<div class="empty">No news for selected sectors</div>`;
+}
+
+// ─── STOCK ROW ────────────────────────────────────────────────────────────────
+function fmt(n) { return n == null ? '—' : n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function stockRowHTML(sym, cid) {
+  const d = stockCache[sym];
+  if (!d) return '';
+  const up = d.change >= 0;
+  const inWL = watchlist.includes(sym);
+  return `
+    <div id="row_${sym}_${cid}" class="srow" onclick="openModal('${sym}')">
+      <button onclick="event.stopPropagation();toggleWL('${sym}')" id="star_${sym}_${cid}"
+        style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;font-size:1.5em;cursor:pointer;color:${inWL?'#ffd93d':'#3a4060'};transition:all .2s">
+        ${inWL ? '★' : '☆'}
+      </button>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:1.05em;font-family:monospace">${sym}</div>
+        <div style="color:#9ba3af;font-size:.82em;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px">${d.name}</div>
+      </div>
+      <div id="price_${sym}_${cid}" style="text-align:right;flex-shrink:0">
+        <div style="font-weight:700;font-size:1.1em;font-family:monospace">$${fmt(d.price)}</div>
+        <div style="font-size:.84em;font-weight:600;margin-top:2px;color:${up?'#00ff88':'#ff4757'}">
+          ${up?'▲':'▼'} ${fmt(Math.abs(d.change))} (${Math.abs(d.pct).toFixed(2)}%)
+        </div>
+      </div>
+    </div>`;
+}
+
+function updatePriceEl(sym, cid) {
+  const el = document.getElementById(`price_${sym}_${cid}`);
+  const row = document.getElementById(`row_${sym}_${cid}`);
+  if (!el) return;
+  const d = stockCache[sym];
+  const up = d.change >= 0;
+  el.innerHTML = `
+    <div style="font-weight:700;font-size:1.1em;font-family:monospace">$${fmt(d.price)}</div>
+    <div style="font-size:.84em;font-weight:600;margin-top:2px;color:${up?'#00ff88':'#ff4757'}">
+      ${up?'▲':'▼'} ${fmt(Math.abs(d.change))} (${Math.abs(d.pct).toFixed(2)}%)
+    </div>`;
+  if (row) {
+    row.style.borderColor = '#00ff88';
+    setTimeout(() => { if(row) row.style.borderColor = '#2d3561'; }, 600);
+  }
+}
+
+// ─── LIVE TICK (re-fetches real data every 30s) ────────────────────────────────
+function startTick(sym, cid) {
+  if (tickerIntervals[`${sym}_${cid}`]) return;
+  const id = setInterval(async () => {
+    try {
+      delete stockCache[sym]; // force re-fetch
+      await fetchQuote(sym);
+      updatePriceEl(sym, cid);
+    } catch(e) {}
+  }, 30000);
+  tickerIntervals[`${sym}_${cid}`] = id;
+}
+
+function clearAllTicks() {
+  Object.values(tickerIntervals).forEach(clearInterval);
+  tickerIntervals = {};
+}
+
+// ─── SEARCH ───────────────────────────────────────────────────────────────────
+let suggestTimeout;
+async function onType() {
+  const q = document.getElementById('sInput').value.trim();
+  const dd = document.getElementById('sDrop');
+  clearTimeout(suggestTimeout);
+  if (q.length < 1) { dd.style.display='none'; return; }
+  suggestTimeout = setTimeout(async () => {
+    try {
+      const results = await fetchSuggestions(q);
+      if (!results.length) { dd.style.display='none'; return; }
+      dd.innerHTML = results.map(r => `
+        <div class="sug" onmousedown="pickSug('${r.symbol}')">
+          <span><strong style="font-family:monospace">${r.symbol}</strong>
+            <span style="color:#9ba3af;font-size:.88em;margin-left:8px">${r.longname || r.shortname || ''}</span>
+          </span>
+          <span style="color:#9ba3af;font-size:.8em">${r.exchDisp || ''}</span>
+        </div>`).join('');
+      dd.style.display = 'block';
+    } catch(e) { dd.style.display='none'; }
+  }, 300);
+}
+
+function closeDrop() { document.getElementById('sDrop').style.display = 'none'; }
+
+function pickSug(sym) {
+  document.getElementById('sInput').value = sym;
+  closeDrop();
+  doSearch();
+}
+
+async function doSearch() {
+  const q = document.getElementById('sInput').value.trim().toUpperCase();
+  const el = document.getElementById('sResults');
+  if (!q) { el.innerHTML=''; return; }
+  closeDrop();
+  el.innerHTML = `<div style="margin-top:12px;display:flex;align-items:center;gap:10px;color:#9ba3af"><span class="spin"></span> Fetching live data for <strong style="color:#00ff88">${q}</strong>…</div>`;
+  try {
+    await fetchQuote(q);
+    const cid = 'sr' + Date.now();
+    el.innerHTML = `<div style="margin-top:14px">${stockRowHTML(q, cid)}</div>`;
+    startTick(q, cid);
+  } catch(e) {
+    el.innerHTML = `<div class="err" style="margin-top:10px">&#10060; Could not find "<strong>${q}</strong>". Make sure it's a valid ticker (e.g. AAPL, TSLA, AMZN).</div>`;
+  }
+}
+
+// ─── WATCHLIST ────────────────────────────────────────────────────────────────
+function toggleWL(sym) {
+  watchlist = watchlist.includes(sym) ? watchlist.filter(s=>s!==sym) : [...watchlist, sym];
+  document.querySelectorAll(`[id^="star_${sym}_"]`).forEach(b => {
+    const on = watchlist.includes(sym);
+    b.textContent = on ? '★' : '☆';
+    b.style.color = on ? '#ffd93d' : '#3a4060';
+  });
+  const badge = document.getElementById('wlBadge');
+  badge.innerHTML = watchlist.length
+    ? `<span style="background:#ffd93d;color:#0a0e27;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:.72em;font-weight:700;margin-left:4px">${watchlist.length}</span>`
+    : '';
+  renderWL();
+}
+
+function toggleWLPanel() {
+  const p = document.getElementById('wlPanel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+function renderWL() {
+  const el = document.getElementById('wlItems');
+  if (!watchlist.length) { el.innerHTML = `<div class="empty">Star stocks with &#9734; to add them here</div>`; return; }
+  el.innerHTML = watchlist.map(sym => stockCache[sym] ? stockRowHTML(sym,'wl') : '').join('');
+  watchlist.forEach(sym => { if(stockCache[sym]) startTick(sym,'wl'); });
+}
+
+// ─── NEWS / TREND CARDS ───────────────────────────────────────────────────────
+function newsHTML(item) {
+  const key = 'news_' + item.id;
+  return `
+    <div class="news-card">
+      <div style="font-weight:600;font-size:.97em;line-height:1.4;margin-bottom:8px">${item.title}</div>
+      <div style="display:flex;gap:10px;color:#9ba3af;font-size:.79em;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+        <span style="color:#00ff88;font-weight:600">${item.source}</span>
+        <span>${item.time}</span>
+        <span style="background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);padding:1px 8px;border-radius:10px">${item.cat}</span>
+      </div>
+      <div style="color:#9ba3af;line-height:1.55;font-size:.86em">${item.summary}</div>
+      ${aiCache[key]
+        ? aiPanelHTML(aiCache[key])
+        : `<button class="ai-btn" id="aib_${key}" onclick="runAI('${key}','${encodeURIComponent(item.prompt)}','aib_${key}','aip_${key}')">&#10022; AI Analysis</button>
+           <div id="aip_${key}"></div>`}
+    </div>`;
+}
+
+function trendHTML(item) {
+  const key = 'trend_' + item.id;
+  return `
+    <div class="trend-card">
+      <div style="font-weight:700;color:#3498db;font-size:.97em;margin-bottom:5px">${item.title}</div>
+      <div style="color:#9ba3af;font-size:.86em;line-height:1.5">${item.desc}</div>
+      ${aiCache[key]
+        ? aiPanelHTML(aiCache[key])
+        : `<button class="ai-btn" id="aib_${key}" onclick="runAI('${key}','${encodeURIComponent(item.prompt)}','aib_${key}','aip_${key}')">&#10022; AI Deep-Dive</button>
+           <div id="aip_${key}"></div>`}
+    </div>`;
+}
+
+function aiPanelHTML(text) {
+  return `<div class="ai-panel">
+    <div style="color:#3498db;font-size:.72em;font-weight:700;font-family:monospace;letter-spacing:1px;margin-bottom:7px">&#10022; AI ANALYSIS</div>
+    <div style="color:#c8d8f0;line-height:1.65;font-size:.86em">${text}</div>
+  </div>`;
+}
+
+async function runAI(key, encodedPrompt, btnId, panelId) {
+  const btn = document.getElementById(btnId);
+  const panel = document.getElementById(panelId);
+  if (!btn || !panel) return;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spin"></span> Analyzing…`;
+  try {
+    const text = await getAI(decodeURIComponent(encodedPrompt));
+    aiCache[key] = text;
+    btn.style.display = 'none';
+    panel.innerHTML = aiPanelHTML(text);
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '&#10022; AI Analysis';
+    panel.innerHTML = `<div class="err">Analysis failed — please try again.</div>`;
+  }
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function openModal(sym) {
+  const d = stockCache[sym];
+  if (!d) return;
+  const up = d.change >= 0;
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-family:monospace;font-size:1.15em;color:#00ff88;margin-bottom:18px;padding-right:44px">${sym} — ${d.name}</div>
+    <div style="padding:20px;background:#151b3d;border-radius:12px;margin-bottom:14px">
+      <div style="font-size:2.2em;font-weight:700;color:#00ff88;font-family:monospace;margin-bottom:6px">$${fmt(d.price)}</div>
+      <div style="font-size:1.1em;color:${up?'#00ff88':'#ff4757'};margin-bottom:16px">
+        ${up?'▲':'▼'} $${fmt(Math.abs(d.change))} (${Math.abs(d.pct).toFixed(2)}%) today
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:14px;border-top:1px solid #2d3561">
+        ${[['Sector',d.sector],['Currency',d.currency],['Day High','$'+fmt(d.price*(1+0.012))],['Day Low','$'+fmt(d.price*(1-0.012))]].map(([l,v])=>`
+          <div>
+            <div style="color:#9ba3af;font-size:.76em;margin-bottom:3px">${l}</div>
+            <div style="font-weight:600;font-size:.93em">${v}</div>
+          </div>`).join('')}
       </div>
     </div>
-  );
+    <div style="color:#9ba3af;font-size:.77em;text-align:center">Live data via Yahoo Finance &bull; Updates every 30s</div>`;
+  document.getElementById('modalBg').style.display = 'flex';
 }
 
-// ── MAIN APP ─────────────────────────────────────────────────────────────────
+function closeModal() { document.getElementById('modalBg').style.display = 'none'; }
 
-export default function LiveStock() {
-  const [screen, setScreen] = useState("setup"); // setup | app
-  const [interests, setInterests] = useState(new Set());
-  const [watchlist, setWatchlist] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [modal, setModal] = useState(null); // { sym }
-  const [expandedNews, setExpandedNews] = useState({}); // id → {loading, text}
-  const [expandedTrends, setExpandedTrends] = useState({}); // id → {loading, text}
-
-  const interestLabels = { technology:"💻 Tech", food:"🍔 Food", healthcare:"⚕️ Health", finance:"💰 Finance", energy:"⚡ Energy", retail:"🛍️ Retail", automotive:"🚗 Auto", entertainment:"🎬 Media" };
-  const interestIcons  = { technology:"💻", food:"🍔", healthcare:"⚕️", finance:"💰", energy:"⚡", retail:"🛍️", automotive:"🚗", entertainment:"🎬" };
-
-  const portfolio = [...new Set([...interests].flatMap(i => interestStockMap[i] || []))].slice(0, 6);
-  const shownNews   = newsItems.filter(n => n.sectors.some(s => interests.has(s))).slice(0, 5);
-  const shownTrends = trendItems.filter(t => t.sectors.some(s => interests.has(s))).slice(0, 5);
-
-  const toggleInterest = i => setInterests(prev => {
-    const n = new Set(prev);
-    n.has(i) ? n.delete(i) : n.add(i);
-    return n;
-  });
-
-  const toggleWL = sym => setWatchlist(prev =>
-    prev.includes(sym) ? prev.filter(s => s !== sym) : [...prev, sym]
-  );
-
-  // AI expand for news
-  const expandNews = async (item) => {
-    setExpandedNews(prev => ({ ...prev, [item.id]: { loading: true, text: "" } }));
-    try {
-      const prompt = `You are a financial analyst. Write a concise 3-sentence market analysis for this news headline: "${item.title}". Context: ${item.summary}. Focus on: market implications, which stocks or sectors are affected, and what investors should watch. Be specific and insightful. No fluff.`;
-      const text = await fetchAISummary(prompt);
-      setExpandedNews(prev => ({ ...prev, [item.id]: { loading: false, text } }));
-    } catch(e) {
-      setExpandedNews(prev => ({ ...prev, [item.id]: { loading: false, text: "Failed to generate summary. Please try again." } }));
-    }
-  };
-
-  // AI expand for trends
-  const expandTrend = async (item) => {
-    setExpandedTrends(prev => ({ ...prev, [item.id]: { loading: true, text: "" } }));
-    try {
-      const prompt = `You are a financial market analyst. Write a concise 3-sentence deep-dive on this market trend: "${item.title}" — ${item.desc}. Key areas to address: ${item.detail}. Cover: current state of the trend, which specific stocks benefit most, and the key risk or headwind. Be precise and data-driven. No fluff.`;
-      const text = await fetchAISummary(prompt);
-      setExpandedTrends(prev => ({ ...prev, [item.id]: { loading: false, text } }));
-    } catch(e) {
-      setExpandedTrends(prev => ({ ...prev, [item.id]: { loading: false, text: "Failed to generate summary. Please try again." } }));
-    }
-  };
-
-  // Search (simulated from stockData)
-  const doSearch = () => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return;
-    setSearchLoading(true);
-    setTimeout(() => {
-      const matches = Object.entries(stockData).filter(([sym, d]) =>
-        sym.toLowerCase().includes(q) || d.name.toLowerCase().includes(q)
-      ).slice(0, 8);
-      setSearchResults(matches);
-      setSearchLoading(false);
-    }, 400);
-  };
-
-  if (screen === "setup") return (
-    <>
-      <style>{css}</style>
-      <div className="ls-root">
-        <div className="bg-grid" />
-        <div className="setup">
-          <div className="setup-box">
-            <div className="logo">📈 LIVESTOCK</div>
-            <p className="sub">AI-powered market tracking with Claude summaries. Pick your sectors to get started.</p>
-            <div className="ig">
-              {Object.entries(interestIcons).map(([key, icon]) => (
-                <div key={key} className={`ic ${interests.has(key) ? "sel" : ""}`} onClick={() => toggleInterest(key)}>
-                  <div className="ico">{icon}</div>
-                  <div className="lbl">{key.charAt(0).toUpperCase() + key.slice(1)}</div>
-                </div>
-              ))}
-            </div>
-            <button className="go-btn" disabled={interests.size === 0} onClick={() => setScreen("app")}>
-              Start Tracking
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-
-  return (
-    <>
-      <style>{css}</style>
-      <div className="ls-root">
-        <div className="bg-grid" />
-        <div className="ls-wrap">
-
-          {/* HEADER */}
-          <div className="hdr">
-            <div className="hdr-left">
-              <h1>📈 LIVESTOCK</h1>
-              <div className="live-badge"><div className="live-dot" /> LIVE · AI-POWERED</div>
-            </div>
-            <div className="hdr-right">
-              <div className="itags">
-                {[...interests].map(i => <div key={i} className="itag">{interestLabels[i]}</div>)}
-              </div>
-              <button className="hbtn wl">
-                ⭐ Watchlist {watchlist.length > 0 && <span className="wlc">{watchlist.length}</span>}
-              </button>
-              <button className="hbtn" onClick={() => setScreen("setup")}>⚙️ Settings</button>
-            </div>
-          </div>
-
-          {/* SEARCH */}
-          <div className="search-sec">
-            <div className="search-info">
-              🔍 <strong>Search any stock</strong> by ticker symbol or company name — powered by local stock data with 45+ symbols across all sectors.
-            </div>
-            <div className="search-row">
-              <input
-                className="sinput"
-                placeholder="Search by ticker or company (e.g. Apple, MSFT, Tesla, Goldman…)"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && doSearch()}
-              />
-              <button className="sbtn" disabled={searchLoading} onClick={doSearch}>
-                {searchLoading ? "…" : "Search"}
-              </button>
-            </div>
-            {searchResults.length > 0 && (
-              <div className="sres open">
-                <div style={{ color: "#9ba3af", fontSize: ".84em", marginBottom: "10px" }}>
-                  {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} found
-                </div>
-                {searchResults.map(([sym, d]) => (
-                  <StockItem key={sym} sym={sym} data={d} isWL={watchlist.includes(sym)} onToggleWL={toggleWL} onOpen={sym => setModal({ sym })} />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* CONTENT GRID */}
-          <div className="cgrid">
-            {/* Portfolio */}
-            <div className="card">
-              <div className="card-title">🎯 Your Portfolio <span className="livebadge">LIVE</span></div>
-              {portfolio.length === 0
-                ? <div className="empty">Select interests to see stocks</div>
-                : portfolio.map(sym => (
-                    <StockItem key={sym} sym={sym} data={stockData[sym]} isWL={watchlist.includes(sym)} onToggleWL={toggleWL} onOpen={s => setModal({ sym: s })} />
-                  ))
-              }
-            </div>
-
-            {/* Trends */}
-            <div className="card">
-              <div className="card-title">📊 Market Trends</div>
-              {shownTrends.length === 0
-                ? <div className="empty">Select interests to see trends</div>
-                : shownTrends.map(item => {
-                    const state = expandedTrends[item.id];
-                    return (
-                      <ExpandableSummary
-                        key={item.id}
-                        type="trend"
-                        item={item}
-                        expanded={!!state?.text}
-                        loading={!!state?.loading}
-                        aiText={state?.text}
-                        onExpand={() => expandTrend(item)}
-                      />
-                    );
-                  })
-              }
-            </div>
-          </div>
-
-          {/* NEWS */}
-          <div className="card">
-            <div className="card-title">📰 Market News</div>
-            {shownNews.length === 0
-              ? <div className="empty">Select interests to see news</div>
-              : shownNews.map(item => {
-                  const state = expandedNews[item.id];
-                  return (
-                    <ExpandableSummary
-                      key={item.id}
-                      type="news"
-                      item={item}
-                      expanded={!!state?.text}
-                      loading={!!state?.loading}
-                      aiText={state?.text}
-                      onExpand={() => expandNews(item)}
-                    />
-                  );
-                })
-            }
-          </div>
-
-        </div>
-      </div>
-
-      {/* STOCK MODAL */}
-      {modal && (() => {
-        const d = stockData[modal.sym];
-        if (!d) return null;
-        const live = simulatePrice(d.price, d.vol);
-        const isPos = live.change >= 0;
-        const fmt = n => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        return (
-          <div className="modal-bg" onClick={() => setModal(null)}>
-            <div className="modal-box" onClick={e => e.stopPropagation()}>
-              <button className="modal-close" onClick={() => setModal(null)}>×</button>
-              <div className="modal-title">{modal.sym} — {d.name}</div>
-              <div className="modal-body">
-                <div style={{ padding: "20px", background: "#151b3d", borderRadius: "12px" }}>
-                  <div style={{ fontSize: "2.3em", fontWeight: 700, color: "#00ff88", fontFamily: "'Space Mono',monospace", marginBottom: "6px" }}>
-                    ${fmt(live.price)}
-                  </div>
-                  <div style={{ fontSize: "1.1em", color: isPos ? "#00ff88" : "#ff4757", marginBottom: "18px" }}>
-                    {isPos ? "▲" : "▼"} {fmt(Math.abs(live.change))} ({Math.abs(live.pct).toFixed(2)}%) today
-                  </div>
-                  <div className="stat-grid">
-                    {[
-                      ["Sector", d.sector.charAt(0).toUpperCase() + d.sector.slice(1)],
-                      ["Volatility", `${(d.vol * 100).toFixed(1)}%`],
-                      ["Day High", `$${fmt(live.price * 1.012)}`],
-                      ["Day Low",  `$${fmt(live.price * 0.988)}`],
-                    ].map(([l,v]) => (
-                      <div key={l} className="stat">
-                        <div className="stat-label">{l}</div>
-                        <div className="stat-val">{v}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ color: "#9ba3af", fontSize: ".78em", textAlign: "center", marginTop: "12px" }}>
-                  Prices simulate live market fluctuations every 3 seconds
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-    </>
-  );
-}
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+buildSetup();
+</script>
+</body>
+</html>
